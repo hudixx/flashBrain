@@ -1,0 +1,12 @@
+com\flashbrain\service\SnippetService.class
+com\flashbrain\repository\SnippetRepository.class
+com\flashbrain\config\CorsConfig.class
+com\flashbrain\entity\Subject.class
+com\flashbrain\controller\OcrController.class
+com\flashbrain\entity\Snippet.class
+com\flashbrain\service\OcrService.class
+com\flashbrain\controller\SubjectController.class
+com\flashbrain\config\RestTemplateConfig.class
+com\flashbrain\FlashBrainApplication.class
+com\flashbrain\controller\SnippetController.class
+com\flashbrain\repository\SubjectRepository.class

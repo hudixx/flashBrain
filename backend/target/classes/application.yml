@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: flashbrain-backend
+  datasource:
+    url: jdbc:h2:mem:flashbrain
+    driverClassName: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+
+# OCR 服务配置
+ocr:
+  server:
+    url: http://localhost:8001/ocr
+  timeout:
+    connect: 500000
+    read: 1500000

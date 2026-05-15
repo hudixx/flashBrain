@@ -1,0 +1,1 @@
+import{_ as o,a as s,c as t,o as a}from"./index-DeDbD70U.js";const c={},n={class:"home"};function r(_,e){return a(),s("div",n,[...e[0]||(e[0]=[t("h1",null,"Welcome to FlashBrain",-1)])])}const d=o(c,[["render",r],["__scopeId","data-v-b97b20fb"]]);export{d as default};

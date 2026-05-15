@@ -1,0 +1,12 @@
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\config\CorsConfig.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\config\RestTemplateConfig.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\controller\OcrController.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\controller\SnippetController.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\controller\SubjectController.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\entity\Snippet.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\entity\Subject.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\FlashBrainApplication.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\repository\SnippetRepository.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\repository\SubjectRepository.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\service\OcrService.java
+E:\myGitRepositorysx\flashBrain\backend\src\main\java\com\flashbrain\service\SnippetService.java
