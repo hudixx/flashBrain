@@ -3,6 +3,9 @@
     <div class="editor-header">
       <h3>编辑知识片段</h3>
       <div class="header-tools">
+        <el-button size="small" text bg @click="emit('toggle-fullscreen')">
+          {{ fullscreen ? '退出全屏' : '全屏编辑' }}
+        </el-button>
         <el-tooltip content="置顶" placement="top">
           <el-icon :class="{ active: snippet.isPinned }" @click="handlePin"><PriceTag /></el-icon>
         </el-tooltip>
@@ -81,9 +84,10 @@ import axios from 'axios'
 
 const props = defineProps<{
   snippet?: any
+  fullscreen?: boolean
 }>()
 
-const emit = defineEmits(['updated'])
+const emit = defineEmits(['updated', 'toggle-fullscreen'])
 
 const md = new MarkdownIt()
 const imageUrl = ref('')
@@ -126,7 +130,7 @@ const handleImageChange = async (file: any) => {
 const saveOcr = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.put(`http://localhost:8080/api/snippets/${props.snippet.id}/ocr`, ocrText.value, {
+    await axios.put(`/api/snippets/${props.snippet.id}/ocr`, ocrText.value, {
       headers: { 'Content-Type': 'text/plain' }
     })
     ElMessage.success('原文存档成功')
@@ -139,7 +143,7 @@ const saveOcr = async () => {
 const saveNote = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.put(`http://localhost:8080/api/snippets/${props.snippet.id}/note`, noteContent.value, {
+    await axios.put(`/api/snippets/${props.snippet.id}/note`, noteContent.value, {
       headers: { 'Content-Type': 'text/plain' }
     })
     ElMessage.success('笔记存档成功')
@@ -152,7 +156,7 @@ const saveNote = async () => {
 const handlePin = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.post(`http://localhost:8080/api/snippets/${props.snippet.id}/toggle-pin`)
+    await axios.post(`/api/snippets/${props.snippet.id}/toggle-pin`)
     ElMessage.success('置顶状态已更新')
     emit('updated')
   } catch (err) {
@@ -163,7 +167,7 @@ const handlePin = async () => {
 const handleMastered = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.post(`http://localhost:8080/api/snippets/${props.snippet.id}/toggle-mastered`)
+    await axios.post(`/api/snippets/${props.snippet.id}/toggle-mastered`)
     ElMessage.success(props.snippet.isMastered ? '已设为活跃' : '已标记为掌握')
     emit('updated')
   } catch (err) {
@@ -179,7 +183,7 @@ const handleDelete = () => {
     cancelButtonText: '取消'
   }).then(async () => {
     try {
-      await axios.delete(`http://localhost:8080/api/snippets/${props.snippet.id}`)
+      await axios.delete(`/api/snippets/${props.snippet.id}`)
       ElMessage.success('删除成功')
       emit('updated')
     } catch (err) {
@@ -207,6 +211,7 @@ const handleDelete = () => {
 }
 .header-tools {
   display: flex;
+  align-items: center;
   gap: 15px;
   color: #909399;
 }

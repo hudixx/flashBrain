@@ -15,7 +15,7 @@ spring:
 # OCR 服务配置
 ocr:
   server:
-    url: http://localhost:8001/ocr
+    url: http://localhost:8093/ocr
   timeout:
     connect: 500000
     read: 1500000

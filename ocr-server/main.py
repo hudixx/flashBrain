@@ -11,7 +11,8 @@ import cv2
 import io
 
 # 禁用 oneDNN 和 PIR API 以避免某些平台上的兼容性问题
-os.environ['FLAGS_use_mkldnn'] = '0'
+# 注意：在 3.2.2 版本下，我们恢复 mkldnn 加速以提升性能
+os.environ['FLAGS_use_mkldnn'] = '1'
 os.environ['FLAGS_enable_pir_api'] = '0'
 os.environ['FLAGS_enable_pir_in_executor'] = '0'
 
@@ -31,11 +32,11 @@ app.add_middleware(
 try:
     # 优化点：增加 cpu_threads 充分利用多核(当前机器有20核)
     # 优化点：use_angle_cls=False 禁用文字方向分类器，可加快识别(假设图片为正向)
-    cpu_threads = max(1, multiprocessing.cpu_count() - 2)
+    cpu_threads = 20
     ocr = PaddleOCR(
         lang="ch", 
         device="cpu", 
-        enable_mkldnn=False,
+        enable_mkldnn=True,
         cpu_threads=cpu_threads,
         use_angle_cls=False
     )
@@ -54,6 +55,7 @@ async def perform_ocr(file: UploadFile = File(...)):
     
     try:
         # 读取图片内容
+        start_time = time.time()
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -89,18 +91,20 @@ async def perform_ocr(file: UploadFile = File(...)):
                         text_lines.append(line[1][0])
         
         full_text = "\n".join(text_lines)
+        processing_time = time.time() - start_time
         
         return {
             "filename": file.filename,
             "text": full_text,
-            "status": "success"
+            "status": "success",
+            "processing_time_sec": round(processing_time, 2)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
 
 def manage_port_conflict(port):
     """
-    检查端口是否被占用，如果是旧的 ocr-server 进程则尝试终止，否则报错退出。
+    检查端口是否被占用，如果是旧s的 ocr-server 进程则尝试终止，否则报错退出。
     """
     for conn in psutil.net_connections(kind='inet'):
         if conn.laddr.port == port and conn.status == 'LISTEN':
