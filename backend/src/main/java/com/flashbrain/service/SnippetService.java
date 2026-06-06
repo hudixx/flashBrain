@@ -65,6 +65,16 @@ public class SnippetService {
     }
 
     @Transactional
+    public Snippet updateSnippet(Long id, Snippet detail) {
+        Snippet snippet = snippetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Snippet not found"));
+        snippet.setTitle(detail.getTitle());
+        snippet.setOcrText(detail.getOcrText());
+        snippet.setNoteContent(detail.getNoteContent());
+        return snippetRepository.save(snippet);
+    }
+
+    @Transactional
     public Snippet updateOcr(Long id, String ocrText) {
         Snippet snippet = snippetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Snippet not found"));

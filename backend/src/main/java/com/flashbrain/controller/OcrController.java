@@ -16,14 +16,15 @@ public class OcrController {
     private OcrService ocrService;
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadAndRecognize(@RequestParam("file") MultipartFile file) {
-        log.info("Received OCR upload request for: {}", file.getOriginalFilename());
+    public ResponseEntity<String> uploadAndRecognize(@RequestParam("file") MultipartFile file,
+                                                     @RequestParam("snippetId") Long snippetId) {
+        log.info("Received OCR upload request for: {}, snippet: {}", file.getOriginalFilename(), snippetId);
         try {
-            String text = ocrService.recognizeText(file);
-            return ResponseEntity.ok(text);
+            ocrService.recognizeTextAsync(file, snippetId);
+            return ResponseEntity.ok("图片上传成功，OCR 正在后台识别");
         } catch (Exception e) {
             log.error("OCR upload failed", e);
-            return ResponseEntity.internalServerError().body("OCR 识别失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("OCR 任务提交失败: " + e.getMessage());
         }
     }
 }

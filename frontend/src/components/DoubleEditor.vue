@@ -1,7 +1,18 @@
 <template>
   <div v-if="snippet" class="double-editor">
     <div class="editor-header">
-      <h3>编辑知识片段</h3>
+      <div class="primary-actions">
+        <el-button size="small" type="primary" @click="saveDetail" :disabled="!snippet">保存</el-button>
+        <el-upload
+          action="#"
+          :auto-upload="false"
+          :show-file-list="false"
+          @change="handleImageChange"
+        >
+          <el-button size="small" type="primary" plain>上传</el-button>
+        </el-upload>
+        <el-button size="small" @click="openImageDialog">查看图片</el-button>
+      </div>
       <div class="header-tools">
         <el-button size="small" text bg @click="emit('toggle-fullscreen')">
           {{ fullscreen ? '退出全屏' : '全屏编辑' }}
@@ -18,28 +29,24 @@
       </div>
     </div>
 
-    <!-- 图片展示区 -->
-    <div class="image-preview">
-      <img v-if="imageUrl" :src="imageUrl" />
-      <el-upload
-        v-else
-        drag
-        action="#"
-        :auto-upload="false"
-        @change="handleImageChange"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">拖拽或点击上传图片</div>
-      </el-upload>
+    <div class="title-row">
+      <el-input
+        v-model="title"
+        type="textarea"
+        :rows="1"
+        resize="vertical"
+        placeholder="请输入片段标题"
+      />
     </div>
 
     <!-- OCR 原文区 -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header collapsible-header" @click="ocrCollapsed = !ocrCollapsed">
         <span>OCR 原文 (系统清洗后)</span>
-        <el-button size="small" type="primary" plain @click="saveOcr" :disabled="!snippet">保存原文修改</el-button>
+        <el-button size="small" text>{{ ocrCollapsed ? '展开' : '收起' }}</el-button>
       </div>
       <el-input
+        v-if="!ocrCollapsed"
         v-model="ocrText"
         type="textarea"
         :rows="4"
@@ -49,17 +56,17 @@
     </div>
 
     <!-- 个人笔记区 -->
-    <div class="section">
+    <div class="section note-section">
       <div class="section-header">
         <span>我的个人内化笔记 (MARKDOWN)</span>
-        <el-button size="small" type="primary" @click="saveNote" :disabled="!snippet">保存个人笔记</el-button>
       </div>
       <el-tabs type="border-card" class="editor-tabs">
         <el-tab-pane label="编辑">
           <el-input
             v-model="noteContent"
+            class="note-input"
             type="textarea"
-            :rows="10"
+            :rows="1"
             placeholder="输入您的思考与总结..."
             :disabled="!snippet"
           />
@@ -69,6 +76,22 @@
         </el-tab-pane>
       </el-tabs>
     </div>
+
+    <el-dialog v-model="imageDialogVisible" title="OCR 图片" width="720px">
+      <el-empty v-if="snippetImages.length === 0" description="暂无上传图片" />
+      <div v-else class="image-grid">
+        <el-image
+          v-for="image in snippetImages"
+          :key="image.id"
+          class="image-thumb"
+          :src="image.url"
+          :preview-src-list="imagePreviewUrls"
+          :initial-index="imagePreviewUrls.indexOf(image.url)"
+          fit="cover"
+          preview-teleported
+        />
+      </div>
+    </el-dialog>
   </div>
   <div v-else class="empty-state">
     <el-empty description="请选择一个知识片段进行编辑" />
@@ -77,7 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { PriceTag, CircleCheck, Delete, UploadFilled } from '@element-plus/icons-vue'
+import { PriceTag, CircleCheck, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import axios from 'axios'
@@ -90,20 +113,27 @@ const props = defineProps<{
 const emit = defineEmits(['updated', 'toggle-fullscreen'])
 
 const md = new MarkdownIt()
-const imageUrl = ref('')
+const title = ref('')
 const ocrText = ref('')
 const noteContent = ref('')
+const imageDialogVisible = ref(false)
+const snippetImages = ref<any[]>([])
+const ocrCollapsed = ref(true)
 
 // 监听 prop 变化并同步到本地 ref
 watch(() => props.snippet, (newVal) => {
   if (newVal) {
+    title.value = newVal.title || ''
     ocrText.value = newVal.ocrText || ''
     noteContent.value = newVal.noteContent || ''
-    imageUrl.value = newVal.imagePath || ''
+    snippetImages.value = []
+    ocrCollapsed.value = !Boolean(newVal.ocrText)
   } else {
+    title.value = ''
     ocrText.value = ''
     noteContent.value = ''
-    imageUrl.value = ''
+    snippetImages.value = []
+    ocrCollapsed.value = true
   }
 }, { immediate: true })
 
@@ -111,42 +141,52 @@ const renderedMarkdown = computed(() => {
   return md.render(noteContent.value || '*暂无内容*')
 })
 
+const imagePreviewUrls = computed(() => snippetImages.value.map(image => image.url))
+
 const handleImageChange = async (file: any) => {
-  imageUrl.value = URL.createObjectURL(file.raw)
-  ElMessage.success('图片上传成功，正在识别...')
-  
-  // 调用后端中转 OCR 服务
+  if (!props.snippet?.id) {
+    ElMessage.warning('请先选择知识片段')
+    return
+  }
+
+  // 上传图片后立即返回，OCR 在后端后台识别并自动保存到当前片段
   try {
     const formData = new FormData()
     formData.append('file', file.raw)
-    const res = await axios.post('/api/ocr/upload', formData)
-    ocrText.value = res.data
-    ElMessage.success('OCR 识别完成')
+    await axios.post(`/api/ocr/upload?snippetId=${props.snippet.id}`, formData)
+    ElMessage.success('图片上传成功，OCR 正在后台识别，稍后刷新或切换片段查看结果')
+    if (imageDialogVisible.value) {
+      await loadSnippetImages()
+    }
   } catch (err) {
-    ElMessage.error('OCR 服务调用失败，请检查后端服务及 OCR Server 状态')
+    ElMessage.error('图片上传失败，请检查后端服务状态')
   }
 }
 
-const saveOcr = async () => {
+const loadSnippetImages = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.put(`/api/snippets/${props.snippet.id}/ocr`, ocrText.value, {
-      headers: { 'Content-Type': 'text/plain' }
-    })
-    ElMessage.success('原文存档成功')
-    emit('updated')
+    const res = await axios.get(`/api/snippets/${props.snippet.id}/images`)
+    snippetImages.value = res.data
   } catch (err) {
-    ElMessage.error('保存失败')
+    ElMessage.error('图片加载失败')
   }
 }
 
-const saveNote = async () => {
+const openImageDialog = async () => {
+  imageDialogVisible.value = true
+  await loadSnippetImages()
+}
+
+const saveDetail = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.put(`/api/snippets/${props.snippet.id}/note`, noteContent.value, {
-      headers: { 'Content-Type': 'text/plain' }
+    await axios.put(`/api/snippets/${props.snippet.id}`, {
+      title: title.value,
+      ocrText: ocrText.value,
+      noteContent: noteContent.value
     })
-    ElMessage.success('笔记存档成功')
+    ElMessage.success('保存成功')
     emit('updated')
   } catch (err) {
     ElMessage.error('保存失败')
@@ -198,6 +238,8 @@ const handleDelete = () => {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 100%;
+  min-height: 0;
 }
 .editor-header {
   display: flex;
@@ -208,6 +250,15 @@ const handleDelete = () => {
 .editor-header h3 {
   margin: 0;
   font-size: 18px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+}
+.primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .header-tools {
   display: flex;
@@ -225,17 +276,26 @@ const handleDelete = () => {
 .header-tools .el-icon:hover {
   color: #333;
 }
-.image-preview img {
-  width: 100%;
-  border-radius: 8px;
-  max-height: 180px;
-  object-fit: contain;
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+.image-thumb {
+  width: 120px;
+  height: 120px;
+  border-radius: 6px;
+  cursor: pointer;
   background: #f0f2f5;
 }
 .section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.note-section {
+  flex: 1;
+  min-height: 0;
 }
 .section-header {
   display: flex;
@@ -245,11 +305,39 @@ const handleDelete = () => {
   color: #606266;
   font-weight: bold;
 }
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+}
 .editor-tabs {
+  flex: 1;
+  min-height: 0;
   border-radius: 4px;
 }
+:deep(.editor-tabs .el-tabs__content) {
+  height: calc(100% - 30px);
+  padding: 10px;
+  overflow: hidden;
+}
+:deep(.editor-tabs .el-tab-pane) {
+  height: 100%;
+}
+:deep(.note-input) {
+  height: 100%;
+}
+:deep(.note-input .el-textarea__inner) {
+  height: 100%;
+  min-height: 180px;
+  resize: vertical;
+}
+:deep(.editor-tabs .el-tabs__item) {
+  font-size: 12px;
+  height: 30px;
+  line-height: 30px;
+}
 .markdown-body {
-  min-height: 200px;
+  height: 100%;
+  overflow: auto;
   padding: 10px;
   background: white;
   font-size: 14px;

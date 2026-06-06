@@ -1,6 +1,8 @@
 package com.flashbrain.controller;
 
 import com.flashbrain.entity.Snippet;
+import com.flashbrain.entity.SnippetImage;
+import com.flashbrain.service.SnippetImageService;
 import com.flashbrain.service.SnippetService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +18,19 @@ public class SnippetController {
     @Autowired
     private SnippetService snippetService;
 
+    @Autowired
+    private SnippetImageService snippetImageService;
+
     @GetMapping("/subject/{subjectId}")
     public List<Snippet> getBySubject(@PathVariable Long subjectId) {
         log.info("Fetching snippets for subject: {}", subjectId);
         return snippetService.getSnippetsBySubject(subjectId);
+    }
+
+    @GetMapping("/{id}/images")
+    public List<SnippetImage> getImages(@PathVariable Long id) {
+        log.info("Fetching images for snippet: {}", id);
+        return snippetImageService.getImages(id);
     }
 
     @PostMapping("/{id}/move")
@@ -38,6 +49,12 @@ public class SnippetController {
     public Snippet create(@RequestBody Snippet snippet) {
         log.info("Creating new snippet: {}", snippet.getTitle());
         return snippetService.createSnippet(snippet);
+    }
+
+    @PutMapping("/{id}")
+    public Snippet update(@PathVariable Long id, @RequestBody Snippet detail) {
+        log.info("Updating snippet detail: {}", id);
+        return snippetService.updateSnippet(id, detail);
     }
 
     @PutMapping("/{id}/ocr")

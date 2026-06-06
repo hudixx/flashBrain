@@ -11,9 +11,11 @@ cache/
 
 # Logs
 *.log
-
+op
 # Hook markers
 .dirty
+.idea
 /target/
 node_modules/
 target/
+uploads/
