@@ -95,13 +95,12 @@
           @click="currentSnippet = s"
         >
           <div class="snippet-content">
-            <img :src="s.imagePath || 'https://via.placeholder.com/60'" class="snippet-img" />
             <div class="snippet-info">
-              <h3>{{ s.title }} <el-tag v-if="s.isPinned" size="small">置顶</el-tag></h3>
-              <p class="ocr-preview">OCR原文: {{ s.ocrText?.substring(0, 50) }}...</p>
-              <span class="meta">#{{ activeSubjectName }}</span>
+              <h3 class="snippet-title">
+                <span class="title-text">{{ s.title }}</span>
+                <el-tag v-if="s.isPinned" size="small">置顶</el-tag>
+              </h3>
             </div>
-            <el-icon v-if="s.isPinned" class="pin-icon"><MapLocation /></el-icon>
             <el-tooltip content="全屏查看" placement="top">
               <el-button
                 class="snippet-fullscreen-btn"
@@ -144,7 +143,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
-import { Monitor, Folder, Search, Plus, MapLocation, Fold, Expand, FullScreen } from '@element-plus/icons-vue'
+import { Monitor, Folder, Search, Plus, Fold, Expand, FullScreen } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import axios from 'axios'
 
@@ -173,10 +172,6 @@ const filteredSnippetList = computed(() => {
     return snippetList.value
   }
   return snippetList.value.filter(s => !s.isMastered)
-})
-
-const activeSubjectName = computed(() => {
-  return subjects.value.find(s => s.id === activeSubjectId.value)?.name || ''
 })
 
 const currentAsideWidth = computed(() => {
@@ -457,9 +452,12 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 .snippet-card {
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   cursor: pointer;
   border-radius: 8px;
+}
+.snippet-card :deep(.el-card__body) {
+  padding: 10px 12px;
 }
 .snippet-card.active {
   border-left: 4px solid #409eff;
@@ -468,50 +466,44 @@ onBeforeUnmount(() => {
   opacity: 0.6;
   filter: grayscale(1);
 }
-.snippet-card.mastered h3,
-.snippet-card.mastered p {
+.snippet-card.mastered h3 {
   text-decoration: line-through;
   color: #909399;
 }
 .snippet-content {
   display: flex;
-  gap: 15px;
+  align-items: center;
+  gap: 8px;
   position: relative;
+  min-height: 28px;
   padding-right: 34px;
-  padding-bottom: 26px;
 }
-.snippet-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 4px;
-  object-fit: cover;
+.snippet-info {
+  min-width: 0;
+  flex: 1;
 }
-.snippet-info h3 {
-  margin: 0 0 5px 0;
-  font-size: 16px;
-}
-.ocr-preview {
+.snippet-title {
   margin: 0;
-  font-size: 13px;
-  color: #606266;
+  font-size: 15px;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.meta {
-  font-size: 12px;
-  color: #909399;
-}
-.pin-icon {
-  position: absolute;
-  top: 0;
-  right: 0;
-  color: #409eff;
+.title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .snippet-fullscreen-btn {
   position: absolute;
   right: 0;
-  bottom: 0;
-  width: 26px;
-  height: 26px;
-  min-height: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
   padding: 0;
   color: #409eff;
 }
