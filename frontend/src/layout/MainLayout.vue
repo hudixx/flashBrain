@@ -21,6 +21,13 @@
             </el-button>
           </div>
         </div>
+        <div class="user-bar">
+          <span class="user-name">{{ authStore.user?.displayName || authStore.user?.username || '当前用户' }}</span>
+          <el-button class="logout-btn" size="small" text @click="logout">
+            <el-icon><SwitchButton /></el-icon>
+            退出
+          </el-button>
+        </div>
         <el-menu :default-active="activeSubjectId ? '1-' + activeSubjectId : '1'" class="menu" @select="handleMenuSelect">
           <el-sub-menu index="1">
             <template #title>
@@ -143,10 +150,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
-import { Monitor, Folder, Search, Plus, Fold, Expand, FullScreen } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { SwitchButton, Monitor, Folder, Search, Plus, Fold, Expand, FullScreen } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import axios from 'axios'
+import apiClient from '../api/client'
+import { useAuthStore } from '../stores/auth'
 
+const authStore = useAuthStore()
+const router = useRouter()
 const showMastered = ref(true)
 const subjects = ref<any[]>([])
 const activeSubjectId = ref<number | null>(null)
@@ -218,7 +229,7 @@ const saveSnippetPanelWidth = () => {
 
 const fetchSubjects = async () => {
   try {
-    const res = await axios.get('http://localhost:8080/api/subjects')
+    const res = await apiClient.get('/subjects')
     subjects.value = res.data
   } catch (err) {
     console.error('加载科目失败', err)
@@ -228,7 +239,7 @@ const fetchSubjects = async () => {
 const fetchSnippets = async () => {
   if (!activeSubjectId.value) return
   try {
-    const res = await axios.get(`http://localhost:8080/api/snippets/subject/${activeSubjectId.value}`)
+    const res = await apiClient.get(`/snippets/subject/${activeSubjectId.value}`)
     snippetList.value = res.data
     if (currentSnippet.value && !snippetList.value.some(s => s.id === currentSnippet.value.id)) {
       currentSnippet.value = null
@@ -255,7 +266,7 @@ const addSubject = () => {
     inputErrorMessage: '名称不能为空',
   }).then(async ({ value }) => {
     try {
-      await axios.post('http://localhost:8080/api/subjects', {
+      await apiClient.post('/subjects', {
         name: value,
         parentId: null
       })
@@ -276,7 +287,7 @@ const addSnippet = () => {
     inputErrorMessage: '标题不能为空',
   }).then(async ({ value }) => {
     try {
-      const res = await axios.post('http://localhost:8080/api/snippets', {
+      const res = await apiClient.post('/snippets', {
         title: value,
         subjectId: activeSubjectId.value,
         ocrText: '',
@@ -289,6 +300,11 @@ const addSnippet = () => {
       ElMessage.error('创建失败')
     }
   })
+}
+
+const logout = () => {
+  authStore.logout()
+  router.push('/login')
 }
 
 const stopResize = () => {
@@ -366,6 +382,30 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.user-bar {
+  margin: 0 20px 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.user-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #cfd3dc;
+  font-size: 13px;
+}
+.logout-btn {
+  color: #cfd3dc;
+}
+.logout-btn:hover {
+  color: white;
 }
 .subject-tools {
   display: flex;

@@ -1,5 +1,6 @@
 package com.flashbrain.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.flashbrain.entity.Snippet;
 import com.flashbrain.entity.SnippetImage;
 import com.flashbrain.mapper.SnippetImageMapper;
@@ -44,10 +45,10 @@ class SnippetImageServiceTest {
         ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
         Snippet snippet = new Snippet();
         snippet.setId(12L);
-        when(snippetMapper.selectById(12L)).thenReturn(snippet);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
         MockMultipartFile file = new MockMultipartFile("file", "hello world.png", "image/png", "image-content".getBytes());
 
-        SnippetImage result = snippetImageService.saveImage(12L, file);
+        SnippetImage result = snippetImageService.saveImage(12L, 3L, file);
 
         ArgumentCaptor<SnippetImage> captor = ArgumentCaptor.forClass(SnippetImage.class);
         verify(snippetImageMapper).insert(captor.capture());
@@ -61,13 +62,14 @@ class SnippetImageServiceTest {
         assertThat(result).isSameAs(inserted);
         assertThat(Files.exists(uploadDir.resolve("ocr-images").resolve("12").resolve(inserted.getStoredFilename()))).isTrue();
     }
+
     @Test
-    void shouldRejectImageUploadWhenSnippetDoesNotExist() {
+    void shouldRejectImageUploadWhenSnippetDoesNotExistForCurrentUser() {
         ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
-        when(snippetMapper.selectById(99L)).thenReturn(null);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
         MockMultipartFile file = new MockMultipartFile("file", "missing.png", "image/png", "image-content".getBytes());
 
-        assertThatThrownBy(() -> snippetImageService.saveImage(99L, file))
+        assertThatThrownBy(() -> snippetImageService.saveImage(99L, 3L, file))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Snippet not found");
 

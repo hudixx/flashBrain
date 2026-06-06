@@ -1,19 +1,9 @@
 <template>
-  <MainLayout>
-    <template #editor="{ snippet, fetchSnippets, fullscreen, toggleFullscreen }">
-      <DoubleEditor
-        :snippet="snippet"
-        :fullscreen="fullscreen"
-        @toggle-fullscreen="toggleFullscreen"
-        @updated="fetchSnippets"
-      />
-    </template>
-  </MainLayout>
+  <RouterView />
 </template>
 
 <script setup lang="ts">
-import MainLayout from './layout/MainLayout.vue'
-import DoubleEditor from './components/DoubleEditor.vue'
+import { RouterView } from 'vue-router'
 </script>
 
 <style>

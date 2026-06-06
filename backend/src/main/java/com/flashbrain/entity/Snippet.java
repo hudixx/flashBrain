@@ -18,6 +18,9 @@ public class Snippet {
     @TableField("subject_id")
     private Long subjectId;
 
+    @TableField("user_id")
+    private Long userId;
+
     @TableField(value = "title", updateStrategy = FieldStrategy.ALWAYS)
     private String title;
 

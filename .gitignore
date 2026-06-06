@@ -19,4 +19,7 @@ op
 node_modules/
 target/
 uploads/
+dist/
+.claude
+.codegraph
 backend/src/main/resources/application-local.yml

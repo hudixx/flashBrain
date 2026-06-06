@@ -103,7 +103,7 @@ import { ref, computed, watch } from 'vue'
 import { PriceTag, CircleCheck, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MarkdownIt from 'markdown-it'
-import axios from 'axios'
+import apiClient from '../api/client'
 
 const props = defineProps<{
   snippet?: any
@@ -153,7 +153,7 @@ const handleImageChange = async (file: any) => {
   try {
     const formData = new FormData()
     formData.append('file', file.raw)
-    await axios.post(`/api/ocr/upload?snippetId=${props.snippet.id}`, formData)
+    await apiClient.post(`/ocr/upload?snippetId=${props.snippet.id}`, formData)
     ElMessage.success('图片上传成功，OCR 正在后台识别，稍后刷新或切换片段查看结果')
     if (imageDialogVisible.value) {
       await loadSnippetImages()
@@ -166,7 +166,7 @@ const handleImageChange = async (file: any) => {
 const loadSnippetImages = async () => {
   if (!props.snippet?.id) return
   try {
-    const res = await axios.get(`/api/snippets/${props.snippet.id}/images`)
+    const res = await apiClient.get(`/snippets/${props.snippet.id}/images`)
     snippetImages.value = res.data
   } catch (err) {
     ElMessage.error('图片加载失败')
@@ -181,7 +181,7 @@ const openImageDialog = async () => {
 const saveDetail = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.put(`/api/snippets/${props.snippet.id}`, {
+    await apiClient.put(`/snippets/${props.snippet.id}`, {
       title: title.value,
       ocrText: ocrText.value,
       noteContent: noteContent.value
@@ -196,7 +196,7 @@ const saveDetail = async () => {
 const handlePin = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.post(`/api/snippets/${props.snippet.id}/toggle-pin`)
+    await apiClient.post(`/snippets/${props.snippet.id}/toggle-pin`)
     ElMessage.success('置顶状态已更新')
     emit('updated')
   } catch (err) {
@@ -207,7 +207,7 @@ const handlePin = async () => {
 const handleMastered = async () => {
   if (!props.snippet?.id) return
   try {
-    await axios.post(`/api/snippets/${props.snippet.id}/toggle-mastered`)
+    await apiClient.post(`/snippets/${props.snippet.id}/toggle-mastered`)
     ElMessage.success(props.snippet.isMastered ? '已设为活跃' : '已标记为掌握')
     emit('updated')
   } catch (err) {
@@ -223,7 +223,7 @@ const handleDelete = () => {
     cancelButtonText: '取消'
   }).then(async () => {
     try {
-      await axios.delete(`/api/snippets/${props.snippet.id}`)
+      await apiClient.delete(`/snippets/${props.snippet.id}`)
       ElMessage.success('删除成功')
       emit('updated')
     } catch (err) {

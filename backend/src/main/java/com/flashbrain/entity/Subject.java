@@ -20,6 +20,9 @@ public class Subject {
     @TableField("parent_id")
     private Long parentId;
 
+    @TableField("user_id")
+    private Long userId;
+
     @TableField("icon")
     private String icon;
 

@@ -23,3 +23,8 @@ ocr:
   timeout:
     connect: 500000
     read: 1500000
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:flashbrain-development-secret-change-me-flashbrain-development-secret}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:86400}

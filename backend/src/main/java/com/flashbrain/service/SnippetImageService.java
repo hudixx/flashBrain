@@ -34,11 +34,8 @@ public class SnippetImageService {
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public SnippetImage saveImage(Long snippetId, MultipartFile file) throws IOException {
-        Snippet snippet = snippetMapper.selectById(snippetId);
-        if (snippet == null) {
-            throw new RuntimeException("Snippet not found");
-        }
+    public SnippetImage saveImage(Long snippetId, Long userId, MultipartFile file) throws IOException {
+        ensureSnippetBelongsToUser(snippetId, userId);
 
         String originalFilename = file.getOriginalFilename() == null ? "ocr-image" : file.getOriginalFilename();
         String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
@@ -60,7 +57,8 @@ public class SnippetImageService {
         return image;
     }
 
-    public List<SnippetImage> getImages(Long snippetId) {
+    public List<SnippetImage> getImages(Long snippetId, Long userId) {
+        ensureSnippetBelongsToUser(snippetId, userId);
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("snippet_id", snippetId)
                 .orderByAsc("created_at");
@@ -72,6 +70,17 @@ public class SnippetImageService {
                 .eq("snippet_id", snippetId);
         snippetImageMapper.delete(query);
         deleteSnippetImageDirectory(snippetId);
+    }
+
+    private void ensureSnippetBelongsToUser(Long snippetId, Long userId) {
+        QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
+                .eq("id", snippetId)
+                .eq("user_id", userId)
+                .last("LIMIT 1");
+        Snippet snippet = snippetMapper.selectOne(query);
+        if (snippet == null) {
+            throw new RuntimeException("Snippet not found");
+        }
     }
 
     private void deleteSnippetImageDirectory(Long snippetId) {

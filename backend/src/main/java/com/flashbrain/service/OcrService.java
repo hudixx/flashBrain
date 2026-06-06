@@ -31,8 +31,8 @@ public class OcrService {
     @Value("${ocr.server.url}")
     private String ocrServerUrl;
 
-    public void recognizeTextAsync(MultipartFile file, Long snippetId) throws IOException {
-        snippetImageService.saveImage(snippetId, file);
+    public void recognizeTextAsync(MultipartFile file, Long snippetId, Long userId) throws IOException {
+        snippetImageService.saveImage(snippetId, userId, file);
 
         byte[] fileBytes = file.getBytes();
         String filename = file.getOriginalFilename();
@@ -40,7 +40,7 @@ public class OcrService {
         CompletableFuture.runAsync(() -> {
             try {
                 String text = recognizeText(fileBytes, filename);
-                snippetService.updateOcr(snippetId, text);
+                snippetService.updateOcr(snippetId, userId, text);
                 log.info("OCR result saved for snippet: {}", snippetId);
             } catch (Exception e) {
                 log.error("Async OCR failed for snippet: {}", snippetId, e);
