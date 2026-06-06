@@ -19,3 +19,4 @@ op
 node_modules/
 target/
 uploads/
+backend/src/main/resources/application-local.yml

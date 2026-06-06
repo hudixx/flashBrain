@@ -1,32 +1,41 @@
 package com.flashbrain.entity;
 
-import javax.persistence.*;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
+@TableName("snippet")
 @Data
 @NoArgsConstructor
 public class Snippet {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    @TableField("subject_id")
     private Long subjectId;
 
+    @TableField(value = "title", updateStrategy = FieldStrategy.ALWAYS)
     private String title;
 
+    @TableField("image_path")
     private String imagePath;
 
-    @Lob
+    @TableField(value = "ocr_text", updateStrategy = FieldStrategy.ALWAYS)
     private String ocrText;
 
-    @Lob
+    @TableField(value = "note_content", updateStrategy = FieldStrategy.ALWAYS)
     private String noteContent;
 
+    @TableField("sort_order")
     private Double sortOrder;
 
+    @TableField("is_pinned")
     private Boolean isPinned = false;
 
+    @TableField("is_mastered")
     private Boolean isMastered = false;
 }

@@ -1,7 +1,7 @@
 package com.flashbrain.controller;
 
 import com.flashbrain.entity.Subject;
-import com.flashbrain.repository.SubjectRepository;
+import com.flashbrain.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,15 +12,15 @@ import java.util.List;
 public class SubjectController {
 
     @Autowired
-    private SubjectRepository subjectRepository;
+    private SubjectService subjectService;
 
     @GetMapping
     public List<Subject> getAll() {
-        return subjectRepository.findAll();
+        return subjectService.getAll();
     }
 
     @PostMapping
     public Subject create(@RequestBody Subject subject) {
-        return subjectRepository.save(subject);
+        return subjectService.create(subject);
     }
 }
