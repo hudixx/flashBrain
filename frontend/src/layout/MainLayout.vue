@@ -8,14 +8,19 @@
     >
       <template v-if="!isSubjectCollapsed">
         <div class="logo-header">
-          <div class="logo">
+          <div
+            class="logo"
+            role="button"
+            tabindex="0"
+            title="收缩科目栏"
+            @click="toggleSubjectCollapsed"
+            @keydown.enter.prevent="toggleSubjectCollapsed"
+            @keydown.space.prevent="toggleSubjectCollapsed"
+          >
             <el-icon><Monitor /></el-icon>
             <span>FlashBrain</span>
           </div>
           <div class="subject-tools">
-            <el-button class="collapse-subject-btn" circle size="small" title="收缩科目栏" @click="toggleSubjectCollapsed">
-              <el-icon><Fold /></el-icon>
-            </el-button>
             <el-button class="add-subject-btn" circle size="small" @click="addSubject">
               <el-icon><Plus /></el-icon>
             </el-button>
@@ -28,7 +33,7 @@
             退出
           </el-button>
         </div>
-        <el-menu :default-active="activeSubjectId ? '1-' + activeSubjectId : '1'" class="menu" @select="handleMenuSelect">
+        <el-menu :default-active="menuActiveIndex" class="menu" @select="handleMenuSelect" @open="handleMenuOpen">
           <el-sub-menu index="1">
             <template #title>
               <el-icon><Folder /></el-icon>
@@ -39,10 +44,46 @@
               :key="sub.id"
               :index="'1-' + sub.id"
             >
-              # {{ sub.name }}
+              <div class="subject-menu-item">
+                <span class="subject-name"># {{ sub.name }}</span>
+                <span class="subject-actions">
+                  <el-button size="small" text title="编辑科目" @click.stop="editSubject(sub)">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button size="small" text title="删除科目" @click.stop="deleteSubject(sub)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </span>
+              </div>
             </el-menu-item>
             <el-menu-item v-if="subjects.length === 0" index="0" disabled>
               暂无科目，请点击 + 添加
+            </el-menu-item>
+          </el-sub-menu>
+          <el-sub-menu index="recycle">
+            <template #title>
+              <el-icon><Delete /></el-icon>
+              <span>回收站</span>
+            </template>
+            <el-menu-item
+              v-for="sub in recycleSubjects"
+              :key="'recycle-' + sub.id"
+              :index="'recycle-' + sub.id"
+            >
+              <div class="subject-menu-item recycle-subject-menu-item">
+                <span class="subject-name">· {{ sub.name }}</span>
+                <span class="subject-actions">
+                  <el-button v-if="sub.isDeleted" size="small" text title="恢复科目" @click.stop="restoreSubject(sub)">
+                    恢复
+                  </el-button>
+                  <el-button v-if="sub.isDeleted" size="small" text title="永久删除科目" @click.stop="permanentDeleteSubject(sub)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </span>
+              </div>
+            </el-menu-item>
+            <el-menu-item v-if="recycleSubjects.length === 0" index="recycle-empty" disabled>
+              回收站为空
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -54,18 +95,26 @@
       <template v-else>
         <div class="collapsed-rail">
           <el-tooltip content="FlashBrain" placement="right">
-            <div class="collapsed-logo">
+            <div
+              class="collapsed-logo"
+              role="button"
+              tabindex="0"
+              title="展开科目栏"
+              @click="toggleSubjectCollapsed"
+              @keydown.enter.prevent="toggleSubjectCollapsed"
+              @keydown.space.prevent="toggleSubjectCollapsed"
+            >
               <el-icon><Monitor /></el-icon>
             </div>
-          </el-tooltip>
-          <el-tooltip content="展开科目栏" placement="right">
-            <el-button class="rail-button" circle size="small" @click="toggleSubjectCollapsed">
-              <el-icon><Expand /></el-icon>
-            </el-button>
           </el-tooltip>
           <el-tooltip content="添加科目" placement="right">
             <el-button class="rail-button" circle size="small" @click="addSubject">
               <el-icon><Plus /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="回收站" placement="right">
+            <el-button class="rail-button" circle size="small" @click="openRecycleBin">
+              <el-icon><Delete /></el-icon>
             </el-button>
           </el-tooltip>
         </div>
@@ -79,21 +128,40 @@
       :style="{ width: `${snippetPanelWidth}px` }"
     >
       <div class="header-actions">
-        <el-input placeholder="搜索关键词 (穿透归档)..." class="search-input">
+        <el-input :placeholder="headerPlaceholder" class="search-input">
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
         <div class="header-right">
-          <span>已掌握内容</span>
-          <el-switch v-model="showMastered" />
-          <el-button type="primary" class="add-btn" :disabled="!activeSubjectId" @click="addSnippet">
-            <el-icon><Plus /></el-icon> 记一下
-          </el-button>
+          <template v-if="viewMode === 'normal'">
+            <el-button
+              v-if="selectedSnippetIds.length > 0"
+              type="danger"
+              plain
+              size="small"
+              @click="batchDeleteSelectedSnippets"
+            >
+              删除已选 {{ selectedSnippetIds.length }} 项
+            </el-button>
+            <span>已掌握内容</span>
+            <el-switch v-model="showMastered" />
+            <el-button type="primary" class="add-btn" :disabled="!activeSubjectId" @click="addSnippet">
+              <el-icon><Plus /></el-icon> 记一下
+            </el-button>
+          </template>
+          <template v-else-if="viewMode === 'recycleSubjects'">
+            <span class="mode-title">回收站</span>
+            <el-button size="small" @click="refreshCurrentView">刷新</el-button>
+          </template>
+          <template v-else>
+            <el-button size="small" @click="backToRecycleSubjects">返回回收站</el-button>
+            <span class="mode-title">{{ activeRecycleSubject?.name || '已删除片段' }}</span>
+          </template>
         </div>
       </div>
 
-      <div class="snippet-list">
+      <div v-if="viewMode === 'normal'" class="snippet-list">
         <el-card
           v-for="s in filteredSnippetList"
           :key="s.id"
@@ -102,6 +170,13 @@
           @click="currentSnippet = s"
         >
           <div class="snippet-content">
+            <el-checkbox
+              class="snippet-checkbox"
+              :model-value="selectedSnippetIds.includes(s.id)"
+              size="small"
+              @click.stop
+              @change="checked => toggleSnippetSelection(s.id, Boolean(checked))"
+            />
             <div class="snippet-info">
               <h3 class="snippet-title">
                 <span class="title-text">{{ s.title }}</span>
@@ -124,6 +199,44 @@
            请选择一个科目，并点击“记一下”开始记录
         </div>
       </div>
+
+      <div v-else-if="viewMode === 'recycleSubjects'" class="snippet-list">
+        <div class="empty-state">
+          <template v-if="recycleSubjects.length === 0">
+            回收站为空
+          </template>
+          <template v-else>
+            请在左侧“回收站”下选择一个科目查看已删除片段
+          </template>
+        </div>
+      </div>
+
+      <div v-else class="snippet-list">
+        <el-card
+          v-for="s in recycleSnippetList"
+          :key="s.id"
+          :class="['snippet-card', 'recycle-card', { active: currentSnippet?.id === s.id }]"
+          shadow="hover"
+          @click="currentSnippet = s"
+        >
+          <div class="recycle-card-content">
+            <div class="recycle-info">
+              <h3 class="snippet-title">
+                <span class="title-text">{{ s.title }}</span>
+                <el-tag size="small" type="danger">已删除</el-tag>
+              </h3>
+              <div class="recycle-meta">删除时间：{{ formatDateTime(s.deletedAt) }}</div>
+            </div>
+            <div class="recycle-actions" @click.stop>
+              <el-button size="small" type="primary" text @click="restoreSnippet(s)">恢复</el-button>
+              <el-button size="small" type="danger" text @click="permanentDeleteSnippet(s)">永久删除</el-button>
+            </div>
+          </div>
+        </el-card>
+        <div v-if="recycleSnippetList.length === 0" class="empty-state">
+          该科目下暂无已删除片段
+        </div>
+      </div>
     </el-main>
 
     <div
@@ -140,9 +253,10 @@
       <slot
         name="editor"
         :snippet="currentSnippet"
-        :fetch-snippets="fetchSnippets"
+        :fetch-snippets="refreshCurrentView"
         :fullscreen="isEditorFullscreen"
         :toggle-fullscreen="toggleEditorFullscreen"
+        :recycle-mode="viewMode === 'recycleSnippets'"
       ></slot>
     </el-aside>
   </el-container>
@@ -151,18 +265,25 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { SwitchButton, Monitor, Folder, Search, Plus, Fold, Expand, FullScreen } from '@element-plus/icons-vue'
+import { SwitchButton, Monitor, Folder, Search, Plus, Expand, FullScreen, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import apiClient from '../api/client'
 import { useAuthStore } from '../stores/auth'
+
+type ViewMode = 'normal' | 'recycleSubjects' | 'recycleSnippets'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const showMastered = ref(true)
 const subjects = ref<any[]>([])
+const recycleSubjects = ref<any[]>([])
 const activeSubjectId = ref<number | null>(null)
+const activeRecycleSubject = ref<any | null>(null)
 const snippetList = ref<any[]>([])
+const recycleSnippetList = ref<any[]>([])
 const currentSnippet = ref<any>(null)
+const selectedSnippetIds = ref<number[]>([])
+const viewMode = ref<ViewMode>('normal')
 
 const SNIPPET_PANEL_WIDTH_KEY = 'flashbrain.snippetPanelWidth'
 const SUBJECT_COLLAPSED_KEY = 'flashbrain.subjectCollapsed'
@@ -187,6 +308,20 @@ const filteredSnippetList = computed(() => {
 
 const currentAsideWidth = computed(() => {
   return isSubjectCollapsed.value ? COLLAPSED_ASIDE_WIDTH : ASIDE_WIDTH
+})
+
+const menuActiveIndex = computed(() => {
+  if (viewMode.value === 'recycleSnippets' && activeRecycleSubject.value?.id) {
+    return `recycle-${activeRecycleSubject.value.id}`
+  }
+  if (viewMode.value === 'recycleSubjects') return 'recycle'
+  return activeSubjectId.value ? `1-${activeSubjectId.value}` : '1'
+})
+
+const headerPlaceholder = computed(() => {
+  if (viewMode.value === 'normal') return '搜索关键词 (穿透归档)...'
+  if (viewMode.value === 'recycleSubjects') return '回收站科目列表'
+  return '回收站片段列表'
 })
 
 const loadSubjectCollapsed = () => {
@@ -227,6 +362,10 @@ const saveSnippetPanelWidth = () => {
   window.localStorage.setItem(SNIPPET_PANEL_WIDTH_KEY, String(snippetPanelWidth.value))
 }
 
+const clearSnippetSelection = () => {
+  selectedSnippetIds.value = []
+}
+
 const fetchSubjects = async () => {
   try {
     const res = await apiClient.get('/subjects')
@@ -236,11 +375,21 @@ const fetchSubjects = async () => {
   }
 }
 
+const fetchRecycleSubjects = async () => {
+  try {
+    const res = await apiClient.get('/subjects/recycle')
+    recycleSubjects.value = res.data
+  } catch (err) {
+    ElMessage.error('加载回收站失败')
+  }
+}
+
 const fetchSnippets = async () => {
   if (!activeSubjectId.value) return
   try {
     const res = await apiClient.get(`/snippets/subject/${activeSubjectId.value}`)
     snippetList.value = res.data
+    clearSnippetSelection()
     if (currentSnippet.value) {
       const latestSnippet = snippetList.value.find(s => s.id === currentSnippet.value.id)
       if (latestSnippet) {
@@ -255,10 +404,92 @@ const fetchSnippets = async () => {
   }
 }
 
+const fetchRecycleSnippets = async () => {
+  if (!activeRecycleSubject.value?.id) return
+  try {
+    const res = await apiClient.get(`/snippets/recycle/subject/${activeRecycleSubject.value.id}`)
+    recycleSnippetList.value = res.data
+    if (currentSnippet.value) {
+      const latestSnippet = recycleSnippetList.value.find(s => s.id === currentSnippet.value.id)
+      if (latestSnippet) {
+        currentSnippet.value = latestSnippet
+      } else {
+        currentSnippet.value = null
+        isEditorFullscreen.value = false
+      }
+    }
+  } catch (err) {
+    ElMessage.error('加载回收站片段失败')
+  }
+}
+
+const refreshCurrentView = async () => {
+  await fetchSubjects()
+  if (viewMode.value === 'normal') {
+    await fetchSnippets()
+    return
+  }
+  await fetchRecycleSubjects()
+  if (viewMode.value === 'recycleSnippets') {
+    await fetchRecycleSnippets()
+  }
+}
+
+const openRecycleBin = async () => {
+  viewMode.value = 'recycleSubjects'
+  activeSubjectId.value = null
+  activeRecycleSubject.value = null
+  currentSnippet.value = null
+  snippetList.value = []
+  recycleSnippetList.value = []
+  clearSnippetSelection()
+  isEditorFullscreen.value = false
+  await fetchRecycleSubjects()
+}
+
+const openRecycleSubject = async (subject: any) => {
+  activeRecycleSubject.value = subject
+  viewMode.value = 'recycleSnippets'
+  currentSnippet.value = null
+  recycleSnippetList.value = []
+  await fetchRecycleSnippets()
+}
+
+const backToRecycleSubjects = async () => {
+  viewMode.value = 'recycleSubjects'
+  activeRecycleSubject.value = null
+  currentSnippet.value = null
+  recycleSnippetList.value = []
+  await fetchRecycleSubjects()
+}
+
+const handleMenuOpen = (index: string) => {
+  if (index === 'recycle') {
+    openRecycleBin()
+  }
+}
+
 const handleMenuSelect = (index: string) => {
+  if (index === 'recycle') {
+    openRecycleBin()
+    return
+  }
+  if (index.startsWith('recycle-')) {
+    const id = parseInt(index.replace('recycle-', ''))
+    const subject = recycleSubjects.value.find(item => item.id === id)
+    if (subject) {
+      openRecycleSubject(subject)
+    }
+    return
+  }
   const id = parseInt(index.replace('1-', ''))
   if (!isNaN(id)) {
+    viewMode.value = 'normal'
     activeSubjectId.value = id
+    activeRecycleSubject.value = null
+    currentSnippet.value = null
+    recycleSnippetList.value = []
+    clearSnippetSelection()
     fetchSnippets()
   }
 }
@@ -276,9 +507,50 @@ const addSubject = () => {
         parentId: null
       })
       ElMessage.success(`成功创建科目: ${value}`)
-      fetchSubjects()
+      await fetchSubjects()
     } catch (err) {
       ElMessage.error('创建失败')
+    }
+  })
+}
+
+const editSubject = (subject: any) => {
+  ElMessageBox.prompt('请输入新的科目名称', '编辑科目', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputValue: subject.name,
+    inputPattern: /.+/,
+    inputErrorMessage: '名称不能为空',
+  }).then(async ({ value }) => {
+    try {
+      await apiClient.put(`/subjects/${subject.id}`, { name: value })
+      ElMessage.success('科目名称已更新')
+      await fetchSubjects()
+    } catch (err) {
+      ElMessage.error('更新失败')
+    }
+  })
+}
+
+const deleteSubject = (subject: any) => {
+  ElMessageBox.confirm(`确定要将科目“${subject.name}”及其下知识片段移入回收站吗？`, '删除科目', {
+    type: 'warning',
+    confirmButtonText: '移入回收站',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      await apiClient.delete(`/subjects/${subject.id}`)
+      ElMessage.success('科目已移入回收站')
+      if (activeSubjectId.value === subject.id) {
+        activeSubjectId.value = null
+        snippetList.value = []
+        currentSnippet.value = null
+        clearSnippetSelection()
+        isEditorFullscreen.value = false
+      }
+      await fetchSubjects()
+    } catch (err) {
+      ElMessage.error('删除失败')
     }
   })
 }
@@ -299,12 +571,117 @@ const addSnippet = () => {
         noteContent: ''
       })
       ElMessage.success(`成功创建片段: ${value}`)
-      fetchSnippets()
+      await fetchSnippets()
       currentSnippet.value = res.data
     } catch (err) {
       ElMessage.error('创建失败')
     }
   })
+}
+
+const toggleSnippetSelection = (id: number, checked: boolean) => {
+  if (checked) {
+    if (!selectedSnippetIds.value.includes(id)) {
+      selectedSnippetIds.value = [...selectedSnippetIds.value, id]
+    }
+    return
+  }
+  selectedSnippetIds.value = selectedSnippetIds.value.filter(selectedId => selectedId !== id)
+}
+
+const batchDeleteSelectedSnippets = () => {
+  if (selectedSnippetIds.value.length === 0) return
+  ElMessageBox.confirm(`确定要将选中的 ${selectedSnippetIds.value.length} 个知识片段移入回收站吗？`, '批量删除', {
+    type: 'warning',
+    confirmButtonText: '移入回收站',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      const ids = [...selectedSnippetIds.value]
+      await apiClient.post('/snippets/batch-delete', ids)
+      if (currentSnippet.value && ids.includes(currentSnippet.value.id)) {
+        currentSnippet.value = null
+        isEditorFullscreen.value = false
+      }
+      clearSnippetSelection()
+      ElMessage.success('已移入回收站')
+      await fetchSnippets()
+    } catch (err) {
+      ElMessage.error('批量删除失败')
+    }
+  })
+}
+
+const restoreSubject = async (subject: any) => {
+  try {
+    await apiClient.post(`/subjects/${subject.id}/restore`)
+    ElMessage.success('科目已恢复')
+    await refreshCurrentView()
+  } catch (err) {
+    ElMessage.error('恢复失败')
+  }
+}
+
+const permanentDeleteSubject = (subject: any) => {
+  ElMessageBox.confirm(`永久删除科目“${subject.name}”及其下全部片段和文件？此操作不可恢复。`, '永久删除科目', {
+    type: 'error',
+    confirmButtonText: '永久删除',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      await apiClient.delete(`/subjects/${subject.id}/permanent`)
+      ElMessage.success('已永久删除')
+      if (activeRecycleSubject.value?.id === subject.id) {
+        activeRecycleSubject.value = null
+        currentSnippet.value = null
+        viewMode.value = 'recycleSubjects'
+      }
+      await refreshCurrentView()
+    } catch (err) {
+      ElMessage.error('永久删除失败')
+    }
+  })
+}
+
+const restoreSnippet = async (snippet: any) => {
+  try {
+    await apiClient.post(`/snippets/${snippet.id}/restore`)
+    ElMessage.success('片段已恢复')
+    if (currentSnippet.value?.id === snippet.id) {
+      currentSnippet.value = null
+      isEditorFullscreen.value = false
+    }
+    await refreshCurrentView()
+  } catch (err) {
+    ElMessage.error('恢复失败')
+  }
+}
+
+const permanentDeleteSnippet = (snippet: any) => {
+  ElMessageBox.confirm(`永久删除知识片段“${snippet.title || '未命名'}”？此操作不可恢复。`, '永久删除片段', {
+    type: 'error',
+    confirmButtonText: '永久删除',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      await apiClient.delete(`/snippets/${snippet.id}/permanent`)
+      ElMessage.success('已永久删除')
+      if (currentSnippet.value?.id === snippet.id) {
+        currentSnippet.value = null
+        isEditorFullscreen.value = false
+      }
+      await refreshCurrentView()
+    } catch (err) {
+      ElMessage.error('永久删除失败')
+    }
+  })
+}
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
 }
 
 const logout = () => {
@@ -387,6 +764,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background-color 0.2s;
+}
+.logo:hover,
+.logo:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
 }
 .user-bar {
   margin: 0 20px 14px;
@@ -450,21 +837,71 @@ onBeforeUnmount(() => {
   justify-content: center;
   color: white;
   background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.collapsed-logo:hover,
+.collapsed-logo:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
 }
 .menu {
   border-right: none;
   background-color: transparent;
   flex: 1;
 }
+:deep(.menu.el-menu),
+:deep(.menu .el-menu),
+:deep(.el-sub-menu .el-menu) {
+  background-color: #1a1c1e;
+}
 :deep(.el-sub-menu__title) {
-  color: #909399;
+  color: #cfd3dc;
+  background-color: #1a1c1e;
+}
+:deep(.el-sub-menu__title:hover) {
+  color: white;
+  background-color: #24272a;
 }
 :deep(.el-menu-item) {
   color: #cfd3dc;
+  background-color: #1f2225;
+}
+:deep(.el-menu-item:hover) {
+  color: white;
+  background-color: #2a2e33;
 }
 :deep(.el-menu-item.is-active) {
   background-color: #409eff;
   color: white;
+}
+.subject-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.subject-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subject-actions {
+  display: none;
+  align-items: center;
+}
+:deep(.el-menu-item:hover) .subject-actions,
+:deep(.el-menu-item.is-active) .subject-actions {
+  display: inline-flex;
+}
+.recycle-subject-menu-item .subject-actions {
+  gap: 4px;
+}
+.subject-actions .el-button {
+  color: inherit;
+  padding: 2px;
 }
 .storage-info {
   padding: 20px;
@@ -496,6 +933,13 @@ onBeforeUnmount(() => {
   gap: 12px;
   font-size: 14px;
 }
+.mode-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
 .snippet-card {
   margin-bottom: 8px;
   cursor: pointer;
@@ -523,7 +967,11 @@ onBeforeUnmount(() => {
   min-height: 28px;
   padding-right: 34px;
 }
-.snippet-info {
+.snippet-checkbox {
+  flex: 0 0 auto;
+}
+.snippet-info,
+.recycle-info {
   min-width: 0;
   flex: 1;
 }
@@ -551,6 +999,29 @@ onBeforeUnmount(() => {
   min-height: 24px;
   padding: 0;
   color: #409eff;
+}
+.recycle-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.recycle-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
+}
+.recycle-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.empty-state {
+  color: #909399;
+  font-size: 14px;
+  text-align: center;
+  padding: 40px 12px;
 }
 .editor-aside {
   flex: 1;

@@ -2,33 +2,45 @@
   <div v-if="snippet" class="double-editor">
     <div class="editor-header">
       <div class="primary-actions">
-        <el-button size="small" type="primary" @click="saveDetail" :disabled="!snippet">保存</el-button>
-        <el-upload
-          action="#"
-          :auto-upload="false"
-          :show-file-list="false"
-          accept="image/*,.txt,.docx,.doc,.pdf,.ofd"
-          :disabled="uploading"
-          @change="handleFileChange"
-        >
-          <el-button size="small" type="primary" plain :loading="uploading">上传文件</el-button>
-        </el-upload>
-        <el-button size="small" @click="openFileDialog">查看文件</el-button>
+        <template v-if="isRecycleMode">
+          <el-button size="small" type="primary" @click="handleRestore">恢复片段</el-button>
+          <el-button size="small" type="danger" plain @click="handlePermanentDelete">永久删除</el-button>
+        </template>
+        <template v-else>
+          <el-button size="small" type="primary" @click="saveDetail" :disabled="!snippet">保存</el-button>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*,.txt,.docx,.doc,.pdf,.ofd"
+            :disabled="uploading"
+            @change="handleFileChange"
+          >
+            <el-button size="small" type="primary" plain :loading="uploading">上传文件</el-button>
+          </el-upload>
+          <el-button size="small" @click="openFileDialog">查看文件</el-button>
+        </template>
       </div>
       <div class="header-tools">
         <el-button size="small" text bg @click="emit('toggle-fullscreen')">
           {{ fullscreen ? '退出全屏' : '全屏编辑' }}
         </el-button>
-        <el-tooltip content="置顶" placement="top">
-          <el-icon :class="{ active: snippet.isPinned }" @click="handlePin"><PriceTag /></el-icon>
-        </el-tooltip>
-        <el-tooltip content="标记掌握" placement="top">
-          <el-icon :class="{ active: snippet.isMastered }" @click="handleMastered"><CircleCheck /></el-icon>
-        </el-tooltip>
-        <el-tooltip content="删除" placement="top">
-          <el-icon @click="handleDelete"><Delete /></el-icon>
-        </el-tooltip>
+        <template v-if="!isRecycleMode">
+          <el-tooltip content="置顶" placement="top">
+            <el-icon :class="{ active: snippet.isPinned }" @click="handlePin"><PriceTag /></el-icon>
+          </el-tooltip>
+          <el-tooltip content="标记掌握" placement="top">
+            <el-icon :class="{ active: snippet.isMastered }" @click="handleMastered"><CircleCheck /></el-icon>
+          </el-tooltip>
+          <el-tooltip content="删除" placement="top">
+            <el-icon @click="handleDelete"><Delete /></el-icon>
+          </el-tooltip>
+        </template>
       </div>
+    </div>
+
+    <div v-if="isRecycleMode" class="recycle-tip">
+      该知识片段位于回收站，只能恢复或永久删除。
     </div>
 
     <div class="title-row">
@@ -38,6 +50,7 @@
         :rows="1"
         resize="vertical"
         placeholder="请输入片段标题"
+        :disabled="isRecycleMode"
       />
     </div>
 
@@ -53,7 +66,7 @@
         type="textarea"
         :rows="4"
         placeholder="OCR 识别结果将在此显示..."
-        :disabled="!snippet"
+        :disabled="!snippet || isRecycleMode"
       />
     </div>
 
@@ -70,7 +83,7 @@
             type="textarea"
             :rows="1"
             placeholder="输入您的思考与总结..."
-            :disabled="!snippet"
+            :disabled="!snippet || isRecycleMode"
           />
         </el-tab-pane>
         <el-tab-pane label="预览">
@@ -116,11 +129,14 @@ import apiClient from '../api/client'
 const props = defineProps<{
   snippet?: any
   fullscreen?: boolean
+  recycleMode?: boolean
 }>()
 
 const emit = defineEmits(['updated', 'toggle-fullscreen'])
 
-const md = new MarkdownIt()
+const md = new MarkdownIt({
+  breaks: true
+})
 const title = ref('')
 const ocrText = ref('')
 const noteContent = ref('')
@@ -129,6 +145,8 @@ const snippetFiles = ref<any[]>([])
 const ocrCollapsed = ref(true)
 const uploading = ref(false)
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'webp']
+
+const isRecycleMode = computed(() => Boolean(props.recycleMode || props.snippet?.isDeleted))
 
 // 监听 prop 变化并同步到本地 ref
 watch(() => props.snippet, (newVal) => {
@@ -186,6 +204,7 @@ const confirmReplaceOcrIfNeeded = async (rawFile: File) => {
 }
 
 const handleFileChange = async (file: any) => {
+  if (isRecycleMode.value) return
   if (!props.snippet?.id) {
     ElMessage.warning('请先选择知识片段')
     return
@@ -274,7 +293,7 @@ const downloadFile = (file: any) => {
 }
 
 const saveDetail = async () => {
-  if (!props.snippet?.id) return
+  if (isRecycleMode.value || !props.snippet?.id) return
   try {
     await apiClient.put(`/snippets/${props.snippet.id}`, {
       title: title.value,
@@ -289,7 +308,7 @@ const saveDetail = async () => {
 }
 
 const handlePin = async () => {
-  if (!props.snippet?.id) return
+  if (isRecycleMode.value || !props.snippet?.id) return
   try {
     await apiClient.post(`/snippets/${props.snippet.id}/toggle-pin`)
     ElMessage.success('置顶状态已更新')
@@ -300,7 +319,7 @@ const handlePin = async () => {
 }
 
 const handleMastered = async () => {
-  if (!props.snippet?.id) return
+  if (isRecycleMode.value || !props.snippet?.id) return
   try {
     await apiClient.post(`/snippets/${props.snippet.id}/toggle-mastered`)
     ElMessage.success(props.snippet.isMastered ? '已设为活跃' : '已标记为掌握')
@@ -311,18 +330,46 @@ const handleMastered = async () => {
 }
 
 const handleDelete = () => {
-  if (!props.snippet?.id) return
-  ElMessageBox.confirm('确定要删除这个知识片段吗？', '提示', {
+  if (isRecycleMode.value || !props.snippet?.id) return
+  ElMessageBox.confirm('确定要将这个知识片段移入回收站吗？', '提示', {
     type: 'warning',
-    confirmButtonText: '确定',
+    confirmButtonText: '移入回收站',
     cancelButtonText: '取消'
   }).then(async () => {
     try {
       await apiClient.delete(`/snippets/${props.snippet.id}`)
-      ElMessage.success('删除成功')
+      ElMessage.success('已移入回收站')
       emit('updated')
     } catch (err) {
       ElMessage.error('删除失败')
+    }
+  })
+}
+
+const handleRestore = async () => {
+  if (!props.snippet?.id) return
+  try {
+    await apiClient.post(`/snippets/${props.snippet.id}/restore`)
+    ElMessage.success('恢复成功')
+    emit('updated')
+  } catch (err) {
+    ElMessage.error('恢复失败')
+  }
+}
+
+const handlePermanentDelete = () => {
+  if (!props.snippet?.id) return
+  ElMessageBox.confirm('永久删除后不可恢复，确定继续吗？', '永久删除片段', {
+    type: 'error',
+    confirmButtonText: '永久删除',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      await apiClient.delete(`/snippets/${props.snippet.id}/permanent`)
+      ElMessage.success('已永久删除')
+      emit('updated')
+    } catch (err) {
+      ElMessage.error('永久删除失败')
     }
   })
 }
@@ -345,6 +392,13 @@ const handleDelete = () => {
 .editor-header h3 {
   margin: 0;
   font-size: 18px;
+}
+.recycle-tip {
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #b88230;
+  background: #fdf6ec;
+  font-size: 13px;
 }
 .title-row {
   display: flex;

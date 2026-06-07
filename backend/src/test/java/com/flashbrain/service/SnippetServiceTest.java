@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,7 +49,7 @@ class SnippetServiceTest {
         ArgumentCaptor<QueryWrapper<Snippet>> captor = ArgumentCaptor.forClass(QueryWrapper.class);
         verify(snippetMapper).selectList(captor.capture());
         String sqlSegment = captor.getValue().getSqlSegment();
-        assertThat(sqlSegment).contains("subject_id").contains("user_id");
+        assertThat(sqlSegment).contains("subject_id").contains("user_id").contains("is_deleted");
         assertThat(sqlSegment).contains("ORDER BY is_pinned DESC,sort_order ASC");
     }
 
@@ -202,12 +203,28 @@ class SnippetServiceTest {
     }
 
     @Test
-    void shouldDeleteSnippetImagesWhenDeletingSnippet() {
+    void shouldSoftDeleteSnippetWithoutDeletingImages() {
         Snippet snippet = new Snippet();
         snippet.setId(1L);
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
         snippetService.deleteSnippet(1L, 3L);
+
+        assertThat(snippet.getIsDeleted()).isTrue();
+        assertThat(snippet.getDeletedAt()).isNotNull();
+        assertThat(snippet.getDeletedBySubject()).isFalse();
+        verify(snippetImageService, never()).deleteImagesBySnippetId(1L);
+        verify(snippetMapper).updateById(snippet);
+    }
+
+    @Test
+    void shouldPermanentlyDeleteSnippetImagesAndSnippet() {
+        Snippet snippet = new Snippet();
+        snippet.setId(1L);
+        snippet.setIsDeleted(true);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
+
+        snippetService.permanentDeleteSnippet(1L, 3L);
 
         verify(snippetImageService).deleteImagesBySnippetId(1L);
         verify(snippetMapper).deleteById(1L);

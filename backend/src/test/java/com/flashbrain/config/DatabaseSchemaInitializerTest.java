@@ -35,11 +35,11 @@ class DatabaseSchemaInitializerTest {
 
         assertThat(subject.getColumns()).containsKey("user_id");
         assertThat(subject.getColumns().get("user_id").getExpectedType()).isEqualTo("bigint");
-        assertThat(subject.getIndexes()).containsKey("idx_subject_user_id");
+        assertThat(subject.getIndexes()).containsKeys("idx_subject_user_id", "idx_subject_user_deleted");
 
         assertThat(snippet.getColumns()).containsKey("user_id");
         assertThat(snippet.getColumns().get("user_id").getExpectedType()).isEqualTo("bigint");
-        assertThat(snippet.getIndexes()).containsKeys("idx_snippet_user_subject", "idx_snippet_user_id");
+        assertThat(snippet.getIndexes()).containsKeys("idx_snippet_user_subject", "idx_snippet_user_id", "idx_snippet_user_deleted_subject");
     }
 
     @Test
@@ -58,8 +58,12 @@ class DatabaseSchemaInitializerTest {
         DatabaseSchemaInitializer.TableDefinition snippet = table("snippet");
 
         assertThat(subject.getColumns().get("is_deleted").getExpectedType()).isEqualTo("tinyint(1)");
+        assertThat(subject.getColumns().get("deleted_at").getExpectedType()).isEqualTo("datetime");
         assertThat(snippet.getColumns().get("is_pinned").getExpectedType()).isEqualTo("tinyint(1)");
         assertThat(snippet.getColumns().get("is_mastered").getExpectedType()).isEqualTo("tinyint(1)");
+        assertThat(snippet.getColumns().get("is_deleted").getExpectedType()).isEqualTo("tinyint(1)");
+        assertThat(snippet.getColumns().get("deleted_by_subject").getExpectedType()).isEqualTo("tinyint(1)");
+        assertThat(snippet.getColumns().get("deleted_at").getExpectedType()).isEqualTo("datetime");
     }
 
     @Test

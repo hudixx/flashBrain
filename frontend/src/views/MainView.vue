@@ -1,9 +1,10 @@
 <template>
   <MainLayout>
-    <template #editor="{ snippet, fetchSnippets, fullscreen, toggleFullscreen }">
+    <template #editor="{ snippet, fetchSnippets, fullscreen, toggleFullscreen, recycleMode }">
       <DoubleEditor
         :snippet="snippet"
         :fullscreen="fullscreen"
+        :recycle-mode="recycleMode"
         @toggle-fullscreen="toggleFullscreen"
         @updated="fetchSnippets"
       />

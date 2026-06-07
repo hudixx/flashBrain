@@ -30,6 +30,12 @@ public class SnippetController {
         return snippetService.getSnippetsBySubject(subjectId, principal.getId());
     }
 
+    @GetMapping("/recycle/subject/{subjectId}")
+    public List<Snippet> getDeletedBySubject(@PathVariable Long subjectId, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Fetching deleted snippets for subject: {}", subjectId);
+        return snippetService.getDeletedSnippetsBySubject(subjectId, principal.getId());
+    }
+
     @GetMapping("/{id}/images")
     public List<SnippetImage> getImages(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching images for snippet: {}", id);
@@ -99,6 +105,24 @@ public class SnippetController {
     public Snippet toggleMastered(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Toggling mastered for snippet: {}", id);
         return snippetService.toggleMastered(id, principal.getId());
+    }
+
+    @PostMapping("/batch-delete")
+    public void batchDelete(@RequestBody List<Long> ids, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Batch deleting snippets: {}", ids);
+        snippetService.batchDeleteSnippets(ids, principal.getId());
+    }
+
+    @PostMapping("/{id}/restore")
+    public Snippet restore(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Restoring snippet: {}", id);
+        return snippetService.restoreSnippet(id, principal.getId());
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public void permanentDelete(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Permanently deleting snippet: {}", id);
+        snippetService.permanentDeleteSnippet(id, principal.getId());
     }
 
     @DeleteMapping("/{id}")

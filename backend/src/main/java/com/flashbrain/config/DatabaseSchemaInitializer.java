@@ -142,6 +142,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "`user_id` BIGINT NULL,"
                         + "`icon` VARCHAR(255) NULL,"
                         + "`is_deleted` TINYINT(1) NULL DEFAULT 0,"
+                        + "`deleted_at` DATETIME NULL,"
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
@@ -150,10 +151,12 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         column("parent_id", "bigint", "`parent_id` BIGINT NULL"),
                         column("user_id", "bigint", "`user_id` BIGINT NULL"),
                         column("icon", "varchar(255)", "`icon` VARCHAR(255) NULL"),
-                        column("is_deleted", "tinyint(1)", "`is_deleted` TINYINT(1) NULL DEFAULT 0")
+                        column("is_deleted", "tinyint(1)", "`is_deleted` TINYINT(1) NULL DEFAULT 0"),
+                        column("deleted_at", "datetime", "`deleted_at` DATETIME NULL")
                 ),
                 indexes(
-                        index("idx_subject_user_id", "CREATE INDEX `idx_subject_user_id` ON `subject` (`user_id`)")
+                        index("idx_subject_user_id", "CREATE INDEX `idx_subject_user_id` ON `subject` (`user_id`)"),
+                        index("idx_subject_user_deleted", "CREATE INDEX `idx_subject_user_deleted` ON `subject` (`user_id`, `is_deleted`, `deleted_at`)")
                 )
         ));
 
@@ -171,6 +174,9 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "`sort_order` DOUBLE NULL,"
                         + "`is_pinned` TINYINT(1) NULL DEFAULT 0,"
                         + "`is_mastered` TINYINT(1) NULL DEFAULT 0,"
+                        + "`is_deleted` TINYINT(1) NULL DEFAULT 0,"
+                        + "`deleted_at` DATETIME NULL,"
+                        + "`deleted_by_subject` TINYINT(1) NULL DEFAULT 0,"
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
@@ -184,11 +190,15 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         column("note_content", "longtext", "`note_content` LONGTEXT NULL"),
                         column("sort_order", "double", "`sort_order` DOUBLE NULL"),
                         column("is_pinned", "tinyint(1)", "`is_pinned` TINYINT(1) NULL DEFAULT 0"),
-                        column("is_mastered", "tinyint(1)", "`is_mastered` TINYINT(1) NULL DEFAULT 0")
+                        column("is_mastered", "tinyint(1)", "`is_mastered` TINYINT(1) NULL DEFAULT 0"),
+                        column("is_deleted", "tinyint(1)", "`is_deleted` TINYINT(1) NULL DEFAULT 0"),
+                        column("deleted_at", "datetime", "`deleted_at` DATETIME NULL"),
+                        column("deleted_by_subject", "tinyint(1)", "`deleted_by_subject` TINYINT(1) NULL DEFAULT 0")
                 ),
                 indexes(
                         index("idx_snippet_user_subject", "CREATE INDEX `idx_snippet_user_subject` ON `snippet` (`user_id`, `subject_id`)"),
-                        index("idx_snippet_user_id", "CREATE INDEX `idx_snippet_user_id` ON `snippet` (`user_id`)")
+                        index("idx_snippet_user_id", "CREATE INDEX `idx_snippet_user_id` ON `snippet` (`user_id`)"),
+                        index("idx_snippet_user_deleted_subject", "CREATE INDEX `idx_snippet_user_deleted_subject` ON `snippet` (`user_id`, `is_deleted`, `subject_id`, `deleted_at`)")
                 )
         ));
 

@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @TableName("snippet")
 @Data
 @NoArgsConstructor
@@ -44,4 +46,13 @@ public class Snippet {
 
     @TableField("is_mastered")
     private Boolean isMastered = false;
+
+    @TableField("is_deleted")
+    private Boolean isDeleted = false;
+
+    @TableField(value = "deleted_at", updateStrategy = FieldStrategy.ALWAYS)
+    private LocalDateTime deletedAt;
+
+    @TableField("deleted_by_subject")
+    private Boolean deletedBySubject = false;
 }

@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -28,7 +30,7 @@ public class SnippetService {
      */
     @Transactional
     public Snippet moveSnippet(Long id, Long userId, Double prevOrder, Double nextOrder) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
 
         double newOrder;
         if (prevOrder == null && nextOrder == null) {
@@ -51,7 +53,7 @@ public class SnippetService {
      */
     @Transactional
     public Snippet archiveSnippet(Long id, Long userId, Long newSubjectId) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         subjectService.ensureSubjectBelongsToUser(newSubjectId, userId);
 
         snippet.setSubjectId(newSubjectId);
@@ -65,8 +67,19 @@ public class SnippetService {
         QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
                 .eq("subject_id", subjectId)
                 .eq("user_id", userId)
+                .and(wrapper -> wrapper.eq("is_deleted", false).or().isNull("is_deleted"))
                 .orderByDesc("is_pinned")
                 .orderByAsc("sort_order");
+        return snippetMapper.selectList(query);
+    }
+
+    public List<Snippet> getDeletedSnippetsBySubject(Long subjectId, Long userId) {
+        subjectService.findSubjectIncludingDeleted(subjectId, userId);
+        QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
+                .eq("subject_id", subjectId)
+                .eq("user_id", userId)
+                .eq("is_deleted", true)
+                .orderByDesc("deleted_at");
         return snippetMapper.selectList(query);
     }
 
@@ -75,6 +88,9 @@ public class SnippetService {
         subjectService.ensureSubjectBelongsToUser(snippet.getSubjectId(), userId);
         snippet.setId(null);
         snippet.setUserId(userId);
+        snippet.setIsDeleted(false);
+        snippet.setDeletedAt(null);
+        snippet.setDeletedBySubject(false);
         if (snippet.getSortOrder() == null) {
             snippet.setSortOrder(System.currentTimeMillis() / 1000.0);
         }
@@ -84,7 +100,7 @@ public class SnippetService {
 
     @Transactional
     public Snippet updateSnippet(Long id, Long userId, Snippet detail) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         snippet.setTitle(detail.getTitle());
         if (!equalsNullable(snippet.getOcrText(), detail.getOcrText())) {
             snippet.setOcrTextVersion(nextOcrTextVersion(snippet.getOcrTextVersion()));
@@ -97,7 +113,7 @@ public class SnippetService {
 
     @Transactional
     public Snippet updateOcr(Long id, Long userId, String ocrText) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         snippet.setOcrText(ocrText);
         snippet.setOcrTextVersion(nextOcrTextVersion(snippet.getOcrTextVersion()));
         snippetMapper.updateById(snippet);
@@ -106,7 +122,7 @@ public class SnippetService {
 
     @Transactional
     public Snippet replaceOcrIfVersionMatches(Long id, Long userId, String ocrText, Long expectedVersion) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         Long currentVersion = normalizeVersion(snippet.getOcrTextVersion());
         if (expectedVersion != null && !currentVersion.equals(expectedVersion)) {
             throw new OcrTextVersionConflictException();
@@ -123,6 +139,7 @@ public class SnippetService {
         UpdateWrapper<Snippet> update = new UpdateWrapper<Snippet>()
                 .eq("id", id)
                 .eq("user_id", userId)
+                .and(wrapper -> wrapper.eq("is_deleted", false).or().isNull("is_deleted"))
                 .set("ocr_text", ocrText)
                 .set("ocr_text_version", version + 1);
         if (version == 0L) {
@@ -134,12 +151,12 @@ public class SnippetService {
     }
 
     public Snippet getSnippet(Long id, Long userId) {
-        return findSnippet(id, userId);
+        return findActiveSnippet(id, userId);
     }
 
     @Transactional
     public Snippet updateNote(Long id, Long userId, String noteContent) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         snippet.setNoteContent(noteContent);
         snippetMapper.updateById(snippet);
         return snippet;
@@ -147,7 +164,7 @@ public class SnippetService {
 
     @Transactional
     public Snippet togglePin(Long id, Long userId) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         snippet.setIsPinned(!Boolean.TRUE.equals(snippet.getIsPinned()));
         snippetMapper.updateById(snippet);
         return snippet;
@@ -155,7 +172,7 @@ public class SnippetService {
 
     @Transactional
     public Snippet toggleMastered(Long id, Long userId) {
-        Snippet snippet = findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
         snippet.setIsMastered(!Boolean.TRUE.equals(snippet.getIsMastered()));
         if (Boolean.TRUE.equals(snippet.getIsMastered())) {
             snippet.setIsPinned(false);
@@ -166,20 +183,77 @@ public class SnippetService {
 
     @Transactional
     public void deleteSnippet(Long id, Long userId) {
-        findSnippet(id, userId);
+        Snippet snippet = findActiveSnippet(id, userId);
+        markSnippetDeleted(snippet, LocalDateTime.now(), false);
+        snippetMapper.updateById(snippet);
+    }
+
+    @Transactional
+    public void batchDeleteSnippets(List<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
+                .in("id", ids)
+                .eq("user_id", userId)
+                .and(wrapper -> wrapper.eq("is_deleted", false).or().isNull("is_deleted"));
+        List<Snippet> snippets = snippetMapper.selectList(query);
+        LocalDateTime now = LocalDateTime.now();
+        for (Snippet snippet : snippets) {
+            markSnippetDeleted(snippet, now, false);
+            snippetMapper.updateById(snippet);
+        }
+    }
+
+    @Transactional
+    public Snippet restoreSnippet(Long id, Long userId) {
+        Snippet snippet = findDeletedSnippet(id, userId);
+        subjectService.restoreSubjectOnly(snippet.getSubjectId(), userId);
+        snippet.setIsDeleted(false);
+        snippet.setDeletedAt(null);
+        snippet.setDeletedBySubject(false);
+        snippetMapper.updateById(snippet);
+        return snippet;
+    }
+
+    @Transactional
+    public void permanentDeleteSnippet(Long id, Long userId) {
+        findDeletedSnippet(id, userId);
         snippetImageService.deleteImagesBySnippetId(id);
         snippetMapper.deleteById(id);
     }
 
     public void ensureSnippetBelongsToUser(Long id, Long userId) {
-        findSnippet(id, userId);
+        findActiveSnippet(id, userId);
     }
 
-    private Snippet findSnippet(Long id, Long userId) {
-        QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
-                .eq("id", id)
-                .eq("user_id", userId)
+    private void markSnippetDeleted(Snippet snippet, LocalDateTime deletedAt, boolean deletedBySubject) {
+        snippet.setIsDeleted(true);
+        snippet.setDeletedAt(deletedAt);
+        snippet.setDeletedBySubject(deletedBySubject);
+    }
+
+    private Snippet findActiveSnippet(Long id, Long userId) {
+        QueryWrapper<Snippet> query = baseSnippetQuery(id, userId)
+                .and(wrapper -> wrapper.eq("is_deleted", false).or().isNull("is_deleted"))
                 .last("LIMIT 1");
+        return requireSnippet(query);
+    }
+
+    private Snippet findDeletedSnippet(Long id, Long userId) {
+        QueryWrapper<Snippet> query = baseSnippetQuery(id, userId)
+                .eq("is_deleted", true)
+                .last("LIMIT 1");
+        return requireSnippet(query);
+    }
+
+    private QueryWrapper<Snippet> baseSnippetQuery(Long id, Long userId) {
+        return new QueryWrapper<Snippet>()
+                .eq("id", id)
+                .eq("user_id", userId);
+    }
+
+    private Snippet requireSnippet(QueryWrapper<Snippet> query) {
         Snippet snippet = snippetMapper.selectOne(query);
         if (snippet == null) {
             throw new RuntimeException("Snippet not found");
