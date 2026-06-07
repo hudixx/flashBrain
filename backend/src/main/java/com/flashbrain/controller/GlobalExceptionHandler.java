@@ -37,6 +37,13 @@ public class GlobalExceptionHandler {
         if (message == null) {
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
+        if (message.contains("OCR 原文已被修改")) {
+            return HttpStatus.CONFLICT;
+        }
+        if (message.contains("解析失败") || message.contains("无法提取") || message.contains("文件内容")
+                || message.contains("文件过大") || message.contains("编码无法识别") || message.contains("不支持的文件类型")) {
+            return HttpStatus.UNPROCESSABLE_ENTITY;
+        }
         if (message.contains("已存在")) {
             return HttpStatus.CONFLICT;
         }

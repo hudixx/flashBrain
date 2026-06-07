@@ -241,9 +241,14 @@ const fetchSnippets = async () => {
   try {
     const res = await apiClient.get(`/snippets/subject/${activeSubjectId.value}`)
     snippetList.value = res.data
-    if (currentSnippet.value && !snippetList.value.some(s => s.id === currentSnippet.value.id)) {
-      currentSnippet.value = null
-      isEditorFullscreen.value = false
+    if (currentSnippet.value) {
+      const latestSnippet = snippetList.value.find(s => s.id === currentSnippet.value.id)
+      if (latestSnippet) {
+        currentSnippet.value = latestSnippet
+      } else {
+        currentSnippet.value = null
+        isEditorFullscreen.value = false
+      }
     }
   } catch (err) {
     console.error('加载碎片失败', err)

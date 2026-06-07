@@ -1,6 +1,7 @@
 package com.flashbrain.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.flashbrain.dto.FilePreviewResult;
 import com.flashbrain.entity.Snippet;
 import com.flashbrain.entity.SnippetImage;
 import com.flashbrain.mapper.SnippetImageMapper;
@@ -31,13 +32,20 @@ public class SnippetImageService {
     @Autowired
     private SnippetMapper snippetMapper;
 
+    @Autowired
+    private FileTextExtractor fileTextExtractor;
+
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
     public SnippetImage saveImage(Long snippetId, Long userId, MultipartFile file) throws IOException {
+        return saveUploadedFile(snippetId, userId, file);
+    }
+
+    public SnippetImage saveUploadedFile(Long snippetId, Long userId, MultipartFile file) throws IOException {
         ensureSnippetBelongsToUser(snippetId, userId);
 
-        String originalFilename = file.getOriginalFilename() == null ? "ocr-image" : file.getOriginalFilename();
+        String originalFilename = file.getOriginalFilename() == null ? "upload-file" : file.getOriginalFilename();
         String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
         String storedFilename = UUID.randomUUID() + "-" + safeFilename;
 
@@ -45,6 +53,9 @@ public class SnippetImageService {
         Files.createDirectories(snippetDir);
 
         Path targetPath = snippetDir.resolve(storedFilename).normalize();
+        if (!targetPath.startsWith(snippetDir)) {
+            throw new IOException("Invalid upload file path");
+        }
         Files.write(targetPath, file.getBytes());
 
         SnippetImage image = new SnippetImage();
@@ -58,6 +69,10 @@ public class SnippetImageService {
     }
 
     public List<SnippetImage> getImages(Long snippetId, Long userId) {
+        return getFiles(snippetId, userId);
+    }
+
+    public List<SnippetImage> getFiles(Long snippetId, Long userId) {
         ensureSnippetBelongsToUser(snippetId, userId);
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("snippet_id", snippetId)
@@ -65,11 +80,30 @@ public class SnippetImageService {
         return snippetImageMapper.selectList(query);
     }
 
+    public FilePreviewResult previewFile(Long snippetId, Long fileId, Long userId) {
+        ensureSnippetBelongsToUser(snippetId, userId);
+        SnippetImage file = findSnippetFile(snippetId, fileId);
+        FileKind kind = fileTextExtractor.detectKind(file.getOriginalFilename(), null, new byte[0]);
+        return new FilePreviewResult(file.getId(), snippetId, file.getOriginalFilename(), kind.name(), null, file.getUrl());
+    }
+
     public void deleteImagesBySnippetId(Long snippetId) {
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("snippet_id", snippetId);
         snippetImageMapper.delete(query);
         deleteSnippetImageDirectory(snippetId);
+    }
+
+    private SnippetImage findSnippetFile(Long snippetId, Long fileId) {
+        QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
+                .eq("id", fileId)
+                .eq("snippet_id", snippetId)
+                .last("LIMIT 1");
+        SnippetImage file = snippetImageMapper.selectOne(query);
+        if (file == null) {
+            throw new RuntimeException("File not found");
+        }
+        return file;
     }
 
     private void ensureSnippetBelongsToUser(Long snippetId, Long userId) {

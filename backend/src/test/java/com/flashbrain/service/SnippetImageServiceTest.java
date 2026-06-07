@@ -1,6 +1,7 @@
 package com.flashbrain.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.flashbrain.dto.FilePreviewResult;
 import com.flashbrain.entity.Snippet;
 import com.flashbrain.entity.SnippetImage;
 import com.flashbrain.mapper.SnippetImageMapper;
@@ -34,6 +35,9 @@ class SnippetImageServiceTest {
     @Mock
     private SnippetMapper snippetMapper;
 
+    @Mock
+    private FileTextExtractor fileTextExtractor;
+
     @InjectMocks
     private SnippetImageService snippetImageService;
 
@@ -64,6 +68,28 @@ class SnippetImageServiceTest {
     }
 
     @Test
+    void shouldSaveNonImageFileAndInsertUploadRecord() throws Exception {
+        ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
+        Snippet snippet = new Snippet();
+        snippet.setId(12L);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
+        MockMultipartFile file = new MockMultipartFile("file", "note file.txt", "text/plain", "text-content".getBytes());
+
+        SnippetImage result = snippetImageService.saveUploadedFile(12L, 3L, file);
+
+        ArgumentCaptor<SnippetImage> captor = ArgumentCaptor.forClass(SnippetImage.class);
+        verify(snippetImageMapper).insert(captor.capture());
+        SnippetImage inserted = captor.getValue();
+
+        assertThat(inserted.getSnippetId()).isEqualTo(12L);
+        assertThat(inserted.getOriginalFilename()).isEqualTo("note file.txt");
+        assertThat(inserted.getStoredFilename()).endsWith("-note_file.txt");
+        assertThat(inserted.getUrl()).startsWith("/uploads/ocr-images/12/");
+        assertThat(result).isSameAs(inserted);
+        assertThat(Files.exists(uploadDir.resolve("ocr-images").resolve("12").resolve(inserted.getStoredFilename()))).isTrue();
+    }
+
+    @Test
     void shouldRejectImageUploadWhenSnippetDoesNotExistForCurrentUser() {
         ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
@@ -75,6 +101,28 @@ class SnippetImageServiceTest {
 
         verify(snippetImageMapper, never()).insert(any(SnippetImage.class));
         assertThat(Files.exists(uploadDir.resolve("ocr-images").resolve("99"))).isFalse();
+    }
+
+    @Test
+    void shouldReturnPreviewMetadataWithoutExtractingDocumentText() {
+        Snippet snippet = new Snippet();
+        snippet.setId(12L);
+        SnippetImage file = new SnippetImage();
+        file.setId(7L);
+        file.setSnippetId(12L);
+        file.setOriginalFilename("note.docx");
+        file.setStoredFilename("stored-note.docx");
+        file.setUrl("/uploads/ocr-images/12/stored-note.docx");
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
+        when(snippetImageMapper.selectOne(any(QueryWrapper.class))).thenReturn(file);
+        when(fileTextExtractor.detectKind("note.docx", null, new byte[0])).thenReturn(FileKind.DOCX);
+
+        FilePreviewResult result = snippetImageService.previewFile(12L, 7L, 3L);
+
+        assertThat(result.getOriginalFilename()).isEqualTo("note.docx");
+        assertThat(result.getFileType()).isEqualTo("DOCX");
+        assertThat(result.getText()).isNull();
+        assertThat(result.getUrl()).isEqualTo("/uploads/ocr-images/12/stored-note.docx");
     }
 
     @Test

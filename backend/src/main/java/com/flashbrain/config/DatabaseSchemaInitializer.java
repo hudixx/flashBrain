@@ -166,6 +166,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "`title` VARCHAR(255) NULL,"
                         + "`image_path` VARCHAR(255) NULL,"
                         + "`ocr_text` LONGTEXT NULL,"
+                        + "`ocr_text_version` BIGINT NULL DEFAULT 0,"
                         + "`note_content` LONGTEXT NULL,"
                         + "`sort_order` DOUBLE NULL,"
                         + "`is_pinned` TINYINT(1) NULL DEFAULT 0,"
@@ -179,6 +180,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         column("title", "varchar(255)", "`title` VARCHAR(255) NULL"),
                         column("image_path", "varchar(255)", "`image_path` VARCHAR(255) NULL"),
                         column("ocr_text", "longtext", "`ocr_text` LONGTEXT NULL"),
+                        column("ocr_text_version", "bigint", "`ocr_text_version` BIGINT NULL DEFAULT 0"),
                         column("note_content", "longtext", "`note_content` LONGTEXT NULL"),
                         column("sort_order", "double", "`sort_order` DOUBLE NULL"),
                         column("is_pinned", "tinyint(1)", "`is_pinned` TINYINT(1) NULL DEFAULT 0"),

@@ -1,6 +1,7 @@
 package com.flashbrain.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.flashbrain.entity.Snippet;
 import com.flashbrain.mapper.SnippetMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +86,9 @@ public class SnippetService {
     public Snippet updateSnippet(Long id, Long userId, Snippet detail) {
         Snippet snippet = findSnippet(id, userId);
         snippet.setTitle(detail.getTitle());
+        if (!equalsNullable(snippet.getOcrText(), detail.getOcrText())) {
+            snippet.setOcrTextVersion(nextOcrTextVersion(snippet.getOcrTextVersion()));
+        }
         snippet.setOcrText(detail.getOcrText());
         snippet.setNoteContent(detail.getNoteContent());
         snippetMapper.updateById(snippet);
@@ -95,8 +99,42 @@ public class SnippetService {
     public Snippet updateOcr(Long id, Long userId, String ocrText) {
         Snippet snippet = findSnippet(id, userId);
         snippet.setOcrText(ocrText);
+        snippet.setOcrTextVersion(nextOcrTextVersion(snippet.getOcrTextVersion()));
         snippetMapper.updateById(snippet);
         return snippet;
+    }
+
+    @Transactional
+    public Snippet replaceOcrIfVersionMatches(Long id, Long userId, String ocrText, Long expectedVersion) {
+        Snippet snippet = findSnippet(id, userId);
+        Long currentVersion = normalizeVersion(snippet.getOcrTextVersion());
+        if (expectedVersion != null && !currentVersion.equals(expectedVersion)) {
+            throw new OcrTextVersionConflictException();
+        }
+        snippet.setOcrText(ocrText);
+        snippet.setOcrTextVersion(nextOcrTextVersion(currentVersion));
+        snippetMapper.updateById(snippet);
+        return snippet;
+    }
+
+    @Transactional
+    public boolean replaceOcrIfVersionStillMatches(Long id, Long userId, String ocrText, Long expectedVersion) {
+        Long version = normalizeVersion(expectedVersion);
+        UpdateWrapper<Snippet> update = new UpdateWrapper<Snippet>()
+                .eq("id", id)
+                .eq("user_id", userId)
+                .set("ocr_text", ocrText)
+                .set("ocr_text_version", version + 1);
+        if (version == 0L) {
+            update.and(wrapper -> wrapper.eq("ocr_text_version", version).or().isNull("ocr_text_version"));
+        } else {
+            update.eq("ocr_text_version", version);
+        }
+        return snippetMapper.update(null, update) > 0;
+    }
+
+    public Snippet getSnippet(Long id, Long userId) {
+        return findSnippet(id, userId);
     }
 
     @Transactional
@@ -146,6 +184,24 @@ public class SnippetService {
         if (snippet == null) {
             throw new RuntimeException("Snippet not found");
         }
+        if (snippet.getOcrTextVersion() == null) {
+            snippet.setOcrTextVersion(0L);
+        }
         return snippet;
+    }
+
+    private Long normalizeVersion(Long version) {
+        return version == null ? 0L : version;
+    }
+
+    private Long nextOcrTextVersion(Long version) {
+        return normalizeVersion(version) + 1;
+    }
+
+    private boolean equalsNullable(String left, String right) {
+        if (left == null) {
+            return right == null;
+        }
+        return left.equals(right);
     }
 }

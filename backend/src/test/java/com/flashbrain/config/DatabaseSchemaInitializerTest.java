@@ -46,8 +46,9 @@ class DatabaseSchemaInitializerTest {
     void shouldDefineSnippetLongTextColumns() {
         DatabaseSchemaInitializer.TableDefinition snippet = table("snippet");
 
-        assertThat(snippet.getColumns()).containsKeys("ocr_text", "note_content");
+        assertThat(snippet.getColumns()).containsKeys("ocr_text", "ocr_text_version", "note_content");
         assertThat(snippet.getColumns().get("ocr_text").getExpectedType()).isEqualTo("longtext");
+        assertThat(snippet.getColumns().get("ocr_text_version").getExpectedType()).isEqualTo("bigint");
         assertThat(snippet.getColumns().get("note_content").getExpectedType()).isEqualTo("longtext");
     }
 

@@ -7,11 +7,13 @@
           action="#"
           :auto-upload="false"
           :show-file-list="false"
-          @change="handleImageChange"
+          accept="image/*,.txt,.docx,.doc,.pdf,.ofd"
+          :disabled="uploading"
+          @change="handleFileChange"
         >
-          <el-button size="small" type="primary" plain>上传</el-button>
+          <el-button size="small" type="primary" plain :loading="uploading">上传文件</el-button>
         </el-upload>
-        <el-button size="small" @click="openImageDialog">查看图片</el-button>
+        <el-button size="small" @click="openFileDialog">查看文件</el-button>
       </div>
       <div class="header-tools">
         <el-button size="small" text bg @click="emit('toggle-fullscreen')">
@@ -77,20 +79,26 @@
       </el-tabs>
     </div>
 
-    <el-dialog v-model="imageDialogVisible" title="OCR 图片" width="720px">
-      <el-empty v-if="snippetImages.length === 0" description="暂无上传图片" />
-      <div v-else class="image-grid">
-        <el-image
-          v-for="image in snippetImages"
-          :key="image.id"
-          class="image-thumb"
-          :src="image.url"
-          :preview-src-list="imagePreviewUrls"
-          :initial-index="imagePreviewUrls.indexOf(image.url)"
-          fit="cover"
-          preview-teleported
-        />
-      </div>
+    <el-dialog v-model="fileDialogVisible" title="上传文件" width="760px">
+      <el-empty v-if="snippetFiles.length === 0" description="暂无上传文件" />
+      <el-table v-else :data="snippetFiles" size="small" class="file-table">
+        <el-table-column label="文件名" min-width="260">
+          <template #default="{ row }">
+            <span class="file-name" :title="row.originalFilename">{{ row.originalFilename }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="上传时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150" align="right">
+          <template #default="{ row }">
+            <el-button size="small" text type="primary" @click="viewFile(row)">查看</el-button>
+            <el-button size="small" text type="primary" @click="downloadFile(row)">下载</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </el-dialog>
   </div>
   <div v-else class="empty-state">
@@ -116,9 +124,11 @@ const md = new MarkdownIt()
 const title = ref('')
 const ocrText = ref('')
 const noteContent = ref('')
-const imageDialogVisible = ref(false)
-const snippetImages = ref<any[]>([])
+const fileDialogVisible = ref(false)
+const snippetFiles = ref<any[]>([])
 const ocrCollapsed = ref(true)
+const uploading = ref(false)
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'webp']
 
 // 监听 prop 变化并同步到本地 ref
 watch(() => props.snippet, (newVal) => {
@@ -126,13 +136,13 @@ watch(() => props.snippet, (newVal) => {
     title.value = newVal.title || ''
     ocrText.value = newVal.ocrText || ''
     noteContent.value = newVal.noteContent || ''
-    snippetImages.value = []
+    snippetFiles.value = []
     ocrCollapsed.value = !Boolean(newVal.ocrText)
   } else {
     title.value = ''
     ocrText.value = ''
     noteContent.value = ''
-    snippetImages.value = []
+    snippetFiles.value = []
     ocrCollapsed.value = true
   }
 }, { immediate: true })
@@ -141,41 +151,126 @@ const renderedMarkdown = computed(() => {
   return md.render(noteContent.value || '*暂无内容*')
 })
 
-const imagePreviewUrls = computed(() => snippetImages.value.map(image => image.url))
+const isImageFile = (rawFile: File) => {
+  const extension = rawFile.name.split('.').pop()?.toLowerCase() || ''
+  return rawFile.type.startsWith('image/') || IMAGE_EXTENSIONS.includes(extension)
+}
 
-const handleImageChange = async (file: any) => {
+const getErrorMessage = (err: any, fallback: string) => {
+  return err?.response?.data?.message || err?.message || fallback
+}
+
+const confirmReplaceOcrIfNeeded = async (rawFile: File) => {
+  if (isImageFile(rawFile)) {
+    return true
+  }
+  const originalOcrText = props.snippet?.ocrText || ''
+  const currentOcrText = ocrText.value || ''
+  if (!originalOcrText && !currentOcrText) {
+    return true
+  }
+  try {
+    await ElMessageBox.confirm(
+      '上传文档读取出的内容将替换当前 OCR 原文，是否继续？',
+      '替换 OCR 原文',
+      {
+        type: 'warning',
+        confirmButtonText: '替换',
+        cancelButtonText: '取消'
+      }
+    )
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+const handleFileChange = async (file: any) => {
   if (!props.snippet?.id) {
     ElMessage.warning('请先选择知识片段')
     return
   }
+  const rawFile = file.raw as File | undefined
+  if (!rawFile) {
+    ElMessage.warning('未读取到上传文件')
+    return
+  }
+  if (!(await confirmReplaceOcrIfNeeded(rawFile))) {
+    return
+  }
 
-  // 上传图片后立即返回，OCR 在后端后台识别并自动保存到当前片段
+  uploading.value = true
   try {
     const formData = new FormData()
-    formData.append('file', file.raw)
-    await apiClient.post(`/ocr/upload?snippetId=${props.snippet.id}`, formData)
-    ElMessage.success('图片上传成功，OCR 正在后台识别，稍后刷新或切换片段查看结果')
-    if (imageDialogVisible.value) {
-      await loadSnippetImages()
+    formData.append('file', rawFile)
+    if (props.snippet.ocrTextVersion !== undefined && props.snippet.ocrTextVersion !== null) {
+      formData.append('ocrTextVersion', String(props.snippet.ocrTextVersion))
     }
-  } catch (err) {
-    ElMessage.error('图片上传失败，请检查后端服务状态')
+    const res = await apiClient.post(`/ocr/upload?snippetId=${props.snippet.id}`, formData)
+    const result = res.data
+    if (result.status === 'TEXT_EXTRACTED') {
+      ocrText.value = result.text || ''
+      ocrCollapsed.value = false
+      ElMessage.success(result.message || '文件内容已读取到 OCR 原文区')
+      emit('updated')
+      return
+    }
+    ElMessage.success(result.message || '图片上传成功，OCR 正在后台识别，稍后刷新或切换片段查看结果')
+    if (fileDialogVisible.value) {
+      await loadSnippetFiles()
+    }
+  } catch (err: any) {
+    ElMessage.error(getErrorMessage(err, '文件上传失败，请检查后端服务状态'))
+  } finally {
+    uploading.value = false
   }
 }
 
-const loadSnippetImages = async () => {
+const loadSnippetFiles = async () => {
   if (!props.snippet?.id) return
   try {
-    const res = await apiClient.get(`/snippets/${props.snippet.id}/images`)
-    snippetImages.value = res.data
+    const res = await apiClient.get(`/snippets/${props.snippet.id}/files`)
+    snippetFiles.value = res.data
   } catch (err) {
-    ElMessage.error('图片加载失败')
+    ElMessage.error('文件列表加载失败')
   }
 }
 
-const openImageDialog = async () => {
-  imageDialogVisible.value = true
-  await loadSnippetImages()
+const openFileDialog = async () => {
+  fileDialogVisible.value = true
+  await loadSnippetFiles()
+}
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
+}
+
+const shouldUsePreviewPage = (file: any) => {
+  const filename = (file?.originalFilename || '').toLowerCase()
+  return filename.endsWith('.doc') || filename.endsWith('.docx') || filename.endsWith('.ofd')
+}
+
+const viewFile = (file: any) => {
+  if (!file?.url) return
+  if (shouldUsePreviewPage(file) && props.snippet?.id && file.id) {
+    window.open(`/preview/snippets/${props.snippet.id}/files/${file.id}`, '_blank', 'noopener,noreferrer')
+    return
+  }
+  window.open(file.url, '_blank', 'noopener,noreferrer')
+}
+
+const downloadFile = (file: any) => {
+  if (!file?.url) return
+  const link = document.createElement('a')
+  link.href = file.url
+  link.download = file.originalFilename || file.storedFilename || 'upload-file'
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 const saveDetail = async () => {
@@ -276,17 +371,16 @@ const handleDelete = () => {
 .header-tools .el-icon:hover {
   color: #333;
 }
-.image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
+.file-table {
+  width: 100%;
 }
-.image-thumb {
-  width: 120px;
-  height: 120px;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #f0f2f5;
+.file-name {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .section {
   display: flex;

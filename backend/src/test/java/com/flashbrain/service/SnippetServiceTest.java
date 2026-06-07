@@ -16,6 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -145,6 +146,59 @@ class SnippetServiceTest {
         assertThat(result.getOcrText()).isNull();
         assertThat(result.getNoteContent()).isNull();
         verify(snippetMapper).updateById(existing);
+    }
+
+    @Test
+    void shouldIncrementOcrVersionWhenUpdatingOcrText() {
+        Snippet existing = new Snippet();
+        existing.setId(1L);
+        existing.setOcrText("old ocr");
+        existing.setOcrTextVersion(4L);
+        Snippet detail = new Snippet();
+        detail.setOcrText("new ocr");
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
+
+        Snippet result = snippetService.updateSnippet(1L, 3L, detail);
+
+        assertThat(result.getOcrText()).isEqualTo("new ocr");
+        assertThat(result.getOcrTextVersion()).isEqualTo(5L);
+        verify(snippetMapper).updateById(existing);
+    }
+
+    @Test
+    void shouldReplaceOcrWhenVersionMatches() {
+        Snippet existing = new Snippet();
+        existing.setId(1L);
+        existing.setOcrTextVersion(2L);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
+
+        Snippet result = snippetService.replaceOcrIfVersionMatches(1L, 3L, "file text", 2L);
+
+        assertThat(result.getOcrText()).isEqualTo("file text");
+        assertThat(result.getOcrTextVersion()).isEqualTo(3L);
+        verify(snippetMapper).updateById(existing);
+    }
+
+    @Test
+    void shouldThrowWhenReplacingOcrWithStaleVersion() {
+        Snippet existing = new Snippet();
+        existing.setId(1L);
+        existing.setOcrTextVersion(3L);
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
+
+        assertThatThrownBy(() -> snippetService.replaceOcrIfVersionMatches(1L, 3L, "file text", 2L))
+                .isInstanceOf(OcrTextVersionConflictException.class)
+                .hasMessage("OCR 原文已被修改，请刷新后再上传文件");
+    }
+
+    @Test
+    void shouldConditionallyReplaceOcrForAsyncResult() {
+        when(snippetMapper.update(isNull(), any())).thenReturn(1);
+
+        boolean result = snippetService.replaceOcrIfVersionStillMatches(1L, 3L, "ocr", 0L);
+
+        assertThat(result).isTrue();
+        verify(snippetMapper).update(isNull(), any());
     }
 
     @Test

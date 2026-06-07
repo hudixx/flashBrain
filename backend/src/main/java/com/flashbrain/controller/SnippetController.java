@@ -1,5 +1,6 @@
 package com.flashbrain.controller;
 
+import com.flashbrain.dto.FilePreviewResult;
 import com.flashbrain.entity.Snippet;
 import com.flashbrain.entity.SnippetImage;
 import com.flashbrain.security.UserPrincipal;
@@ -33,6 +34,20 @@ public class SnippetController {
     public List<SnippetImage> getImages(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching images for snippet: {}", id);
         return snippetImageService.getImages(id, principal.getId());
+    }
+
+    @GetMapping("/{id}/files")
+    public List<SnippetImage> getFiles(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Fetching uploaded files for snippet: {}", id);
+        return snippetImageService.getFiles(id, principal.getId());
+    }
+
+    @GetMapping("/{id}/files/{fileId}/preview")
+    public FilePreviewResult previewFile(@PathVariable Long id,
+                                         @PathVariable Long fileId,
+                                         @AuthenticationPrincipal UserPrincipal principal) throws Exception {
+        log.info("Previewing uploaded file: {} for snippet: {}", fileId, id);
+        return snippetImageService.previewFile(id, fileId, principal.getId());
     }
 
     @PostMapping("/{id}/move")

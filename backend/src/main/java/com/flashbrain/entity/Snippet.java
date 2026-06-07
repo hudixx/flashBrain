@@ -30,6 +30,9 @@ public class Snippet {
     @TableField(value = "ocr_text", updateStrategy = FieldStrategy.ALWAYS)
     private String ocrText;
 
+    @TableField("ocr_text_version")
+    private Long ocrTextVersion = 0L;
+
     @TableField(value = "note_content", updateStrategy = FieldStrategy.ALWAYS)
     private String noteContent;
 
