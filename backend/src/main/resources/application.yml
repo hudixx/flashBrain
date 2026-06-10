@@ -1,8 +1,10 @@
+server:
+  port: 8011
 spring:
   application:
     name: flashbrain-backend
   config:
-    import: optional:classpath:application-local.yml
+    import: optional:classpath:application-dev.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/flashbrain?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
@@ -18,8 +20,11 @@ mybatis-plus:
 
 # OCR 服务配置
 ocr:
+  baidu:
+    apiKey: XXX
+    secretKey: XXXX
   server:
-    url: http://localhost:8093/ocr
+    url: http://127.0.0.1:8093/ocr
   timeout:
     connect: 500000
     read: 1500000
