@@ -65,6 +65,17 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # 3. 后端静态图片资源反向代理
+    # 浏览器请求 http://IP:8010/uploads/... 将被从 Nginx 转发到 http://127.0.0.1:8011/uploads/...
+    location /uploads {
+        proxy_pass http://127.0.0.1:8011; # 后端的启动端口 8011
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # 错误页面配置（可选）
     error_page   500 502 503 504  /50x.html;
     location = /50x.html {
