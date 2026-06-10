@@ -48,17 +48,17 @@ class SnippetImageServiceTest {
     void shouldSaveImageFileAndInsertImageRecord() throws Exception {
         ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
         Snippet snippet = new Snippet();
-        snippet.setId(12L);
+        snippet.setId("12");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
         MockMultipartFile file = new MockMultipartFile("file", "hello world.png", "image/png", "image-content".getBytes());
 
-        SnippetImage result = snippetImageService.saveImage(12L, 3L, file);
+        SnippetImage result = snippetImageService.saveImage("12", "3", file);
 
         ArgumentCaptor<SnippetImage> captor = ArgumentCaptor.forClass(SnippetImage.class);
         verify(snippetImageMapper).insert(captor.capture());
         SnippetImage inserted = captor.getValue();
 
-        assertThat(inserted.getSnippetId()).isEqualTo(12L);
+        assertThat(inserted.getSnippetId()).isEqualTo("12");
         assertThat(inserted.getOriginalFilename()).isEqualTo("hello world.png");
         assertThat(inserted.getStoredFilename()).endsWith("-hello_world.png");
         assertThat(inserted.getUrl()).startsWith("/uploads/ocr-images/12/");
@@ -71,17 +71,17 @@ class SnippetImageServiceTest {
     void shouldSaveNonImageFileAndInsertUploadRecord() throws Exception {
         ReflectionTestUtils.setField(snippetImageService, "uploadDir", uploadDir.toString());
         Snippet snippet = new Snippet();
-        snippet.setId(12L);
+        snippet.setId("12");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
         MockMultipartFile file = new MockMultipartFile("file", "note file.txt", "text/plain", "text-content".getBytes());
 
-        SnippetImage result = snippetImageService.saveUploadedFile(12L, 3L, file);
+        SnippetImage result = snippetImageService.saveUploadedFile("12", "3", file);
 
         ArgumentCaptor<SnippetImage> captor = ArgumentCaptor.forClass(SnippetImage.class);
         verify(snippetImageMapper).insert(captor.capture());
         SnippetImage inserted = captor.getValue();
 
-        assertThat(inserted.getSnippetId()).isEqualTo(12L);
+        assertThat(inserted.getSnippetId()).isEqualTo("12");
         assertThat(inserted.getOriginalFilename()).isEqualTo("note file.txt");
         assertThat(inserted.getStoredFilename()).endsWith("-note_file.txt");
         assertThat(inserted.getUrl()).startsWith("/uploads/ocr-images/12/");
@@ -95,7 +95,7 @@ class SnippetImageServiceTest {
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
         MockMultipartFile file = new MockMultipartFile("file", "missing.png", "image/png", "image-content".getBytes());
 
-        assertThatThrownBy(() -> snippetImageService.saveImage(99L, 3L, file))
+        assertThatThrownBy(() -> snippetImageService.saveImage("99", "3", file))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Snippet not found");
 
@@ -106,10 +106,10 @@ class SnippetImageServiceTest {
     @Test
     void shouldReturnPreviewMetadataWithoutExtractingDocumentText() {
         Snippet snippet = new Snippet();
-        snippet.setId(12L);
+        snippet.setId("12");
         SnippetImage file = new SnippetImage();
-        file.setId(7L);
-        file.setSnippetId(12L);
+        file.setId("7");
+        file.setSnippetId("12");
         file.setOriginalFilename("note.docx");
         file.setStoredFilename("stored-note.docx");
         file.setUrl("/uploads/ocr-images/12/stored-note.docx");
@@ -117,7 +117,7 @@ class SnippetImageServiceTest {
         when(snippetImageMapper.selectOne(any(QueryWrapper.class))).thenReturn(file);
         when(fileTextExtractor.detectKind("note.docx", null, new byte[0])).thenReturn(FileKind.DOCX);
 
-        FilePreviewResult result = snippetImageService.previewFile(12L, 7L, 3L);
+        FilePreviewResult result = snippetImageService.previewFile("12", "7", "3");
 
         assertThat(result.getOriginalFilename()).isEqualTo("note.docx");
         assertThat(result.getFileType()).isEqualTo("DOCX");
@@ -132,7 +132,7 @@ class SnippetImageServiceTest {
         Files.createDirectories(snippetDir);
         Files.write(snippetDir.resolve("old.png"), "image-content".getBytes());
 
-        snippetImageService.deleteImagesBySnippetId(12L);
+        snippetImageService.deleteImagesBySnippetId("12");
 
         verify(snippetImageMapper).delete(any());
         assertThat(Files.exists(snippetDir)).isFalse();

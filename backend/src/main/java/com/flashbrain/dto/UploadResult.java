@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UploadResult {
     private String status;
-    private Long snippetId;
+    private String snippetId;
     private String fileType;
     private String text;
     private String message;

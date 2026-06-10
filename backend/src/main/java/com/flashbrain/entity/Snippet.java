@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 public class Snippet {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
+    private String id;
 
     @TableField("subject_id")
-    private Long subjectId;
+    private String subjectId;
 
     @TableField("user_id")
-    private Long userId;
+    private String userId;
 
     @TableField(value = "title", updateStrategy = FieldStrategy.ALWAYS)
     private String title;

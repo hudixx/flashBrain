@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FilePreviewResult {
-    private Long fileId;
-    private Long snippetId;
+    private String fileId;
+    private String snippetId;
     private String originalFilename;
     private String fileType;
     private String text;

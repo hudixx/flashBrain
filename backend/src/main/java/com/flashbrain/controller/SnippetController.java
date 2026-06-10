@@ -57,7 +57,7 @@ public class SnippetController {
 
     @GetMapping("/{id}/files/{fileId}/preview")
     public FilePreviewResult previewFile(@PathVariable String id,
-                                         @PathVariable Long fileId,
+                                         @PathVariable String fileId,
                                          @AuthenticationPrincipal UserPrincipal principal) throws Exception {
         log.info("Previewing uploaded file: {} for snippet: {}", fileId, id);
         return snippetImageService.previewFile(id, fileId, principal.getId());

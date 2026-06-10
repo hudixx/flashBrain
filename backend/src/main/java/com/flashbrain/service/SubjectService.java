@@ -28,24 +28,24 @@ public class SubjectService {
     @Autowired
     private SnippetImageService snippetImageService;
 
-    public List<Subject> getAll(Long userId) {
+    public List<Subject> getAll(String userId) {
         QueryWrapper<Subject> query = new QueryWrapper<Subject>()
                 .eq("user_id", userId)
                 .eq("is_deleted", false);
         return subjectMapper.selectList(query);
     }
 
-    public List<Subject> getRecycleSubjects(Long userId) {
+    public List<Subject> getRecycleSubjects(String userId) {
         List<Subject> subjects = subjectMapper.selectList(new QueryWrapper<Subject>()
                 .eq("user_id", userId));
         List<Snippet> deletedSnippets = snippetMapper.selectList(new QueryWrapper<Snippet>()
                 .eq("user_id", userId)
                 .eq("is_deleted", true));
 
-        Map<Long, Integer> deletedSnippetCountBySubject = new HashMap<>();
-        Map<Long, LocalDateTime> latestSnippetDeletedAtBySubject = new HashMap<>();
+        Map<String, Integer> deletedSnippetCountBySubject = new HashMap<>();
+        Map<String, LocalDateTime> latestSnippetDeletedAtBySubject = new HashMap<>();
         for (Snippet snippet : deletedSnippets) {
-            Long subjectId = snippet.getSubjectId();
+            String subjectId = snippet.getSubjectId();
             if (subjectId == null) {
                 continue;
             }
@@ -75,7 +75,7 @@ public class SubjectService {
         return recycleSubjects;
     }
 
-    public Subject create(Subject subject, Long userId) {
+    public Subject create(Subject subject, String userId) {
         subject.setId(null);
         subject.setUserId(userId);
         if (subject.getIsDeleted() == null) {
@@ -87,7 +87,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject update(Long id, Subject detail, Long userId) {
+    public Subject update(String id, Subject detail, String userId) {
         Subject subject = findActiveSubject(id, userId);
         subject.setName(detail.getName());
         subjectMapper.updateById(subject);
@@ -95,7 +95,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public void softDeleteSubject(Long id, Long userId) {
+    public void softDeleteSubject(String id, String userId) {
         Subject subject = findActiveSubject(id, userId);
         LocalDateTime now = LocalDateTime.now();
         subject.setIsDeleted(true);
@@ -115,7 +115,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject restoreSubject(Long id, Long userId) {
+    public Subject restoreSubject(String id, String userId) {
         Subject subject = findDeletedSubject(id, userId);
         restoreSubjectFields(subject);
         subjectMapper.updateById(subject);
@@ -135,7 +135,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject restoreSubjectOnly(Long id, Long userId) {
+    public Subject restoreSubjectOnly(String id, String userId) {
         Subject subject = findSubjectIncludingDeleted(id, userId);
         if (Boolean.TRUE.equals(subject.getIsDeleted())) {
             restoreSubjectFields(subject);
@@ -145,7 +145,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public void permanentDeleteSubject(Long id, Long userId) {
+    public void permanentDeleteSubject(String id, String userId) {
         findDeletedSubject(id, userId);
         List<Snippet> snippets = snippetMapper.selectList(new QueryWrapper<Snippet>()
                 .eq("subject_id", id)
@@ -157,7 +157,7 @@ public class SubjectService {
         subjectMapper.deleteById(id);
     }
 
-    public void ensureSubjectBelongsToUser(Long subjectId, Long userId) {
+    public void ensureSubjectBelongsToUser(String subjectId, String userId) {
         if (subjectId == null) {
             throw new RuntimeException("Subject not found");
         }
@@ -170,7 +170,7 @@ public class SubjectService {
         }
     }
 
-    public Subject findSubjectIncludingDeleted(Long subjectId, Long userId) {
+    public Subject findSubjectIncludingDeleted(String subjectId, String userId) {
         if (subjectId == null) {
             throw new RuntimeException("Subject not found");
         }
@@ -185,7 +185,7 @@ public class SubjectService {
         return subject;
     }
 
-    private Subject findActiveSubject(Long id, Long userId) {
+    private Subject findActiveSubject(String id, String userId) {
         QueryWrapper<Subject> query = new QueryWrapper<Subject>()
                 .eq("id", id)
                 .eq("user_id", userId)
@@ -198,7 +198,7 @@ public class SubjectService {
         return subject;
     }
 
-    private Subject findDeletedSubject(Long id, Long userId) {
+    private Subject findDeletedSubject(String id, String userId) {
         QueryWrapper<Subject> query = new QueryWrapper<Subject>()
                 .eq("id", id)
                 .eq("user_id", userId)

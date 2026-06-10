@@ -14,17 +14,17 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 public class Subject {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
+    private String id;
 
     @TableField("name")
     private String name;
 
     @TableField("parent_id")
-    private Long parentId;
+    private String parentId;
 
     @TableField("user_id")
-    private Long userId;
+    private String userId;
 
     @TableField("icon")
     private String icon;

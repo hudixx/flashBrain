@@ -38,11 +38,11 @@ public class SnippetImageService {
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public SnippetImage saveImage(Long snippetId, Long userId, MultipartFile file) throws IOException {
+    public SnippetImage saveImage(String snippetId, String userId, MultipartFile file) throws IOException {
         return saveUploadedFile(snippetId, userId, file);
     }
 
-    public SnippetImage saveUploadedFile(Long snippetId, Long userId, MultipartFile file) throws IOException {
+    public SnippetImage saveUploadedFile(String snippetId, String userId, MultipartFile file) throws IOException {
         ensureSnippetBelongsToUser(snippetId, userId);
 
         String originalFilename = file.getOriginalFilename() == null ? "upload-file" : file.getOriginalFilename();
@@ -68,11 +68,11 @@ public class SnippetImageService {
         return image;
     }
 
-    public List<SnippetImage> getImages(Long snippetId, Long userId) {
+    public List<SnippetImage> getImages(String snippetId, String userId) {
         return getFiles(snippetId, userId);
     }
 
-    public List<SnippetImage> getFiles(Long snippetId, Long userId) {
+    public List<SnippetImage> getFiles(String snippetId, String userId) {
         ensureSnippetBelongsToUser(snippetId, userId);
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("snippet_id", snippetId)
@@ -80,21 +80,21 @@ public class SnippetImageService {
         return snippetImageMapper.selectList(query);
     }
 
-    public FilePreviewResult previewFile(Long snippetId, Long fileId, Long userId) {
+    public FilePreviewResult previewFile(String snippetId, String fileId, String userId) {
         ensureSnippetBelongsToUser(snippetId, userId);
         SnippetImage file = findSnippetFile(snippetId, fileId);
         FileKind kind = fileTextExtractor.detectKind(file.getOriginalFilename(), null, new byte[0]);
         return new FilePreviewResult(file.getId(), snippetId, file.getOriginalFilename(), kind.name(), null, file.getUrl());
     }
 
-    public void deleteImagesBySnippetId(Long snippetId) {
+    public void deleteImagesBySnippetId(String snippetId) {
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("snippet_id", snippetId);
         snippetImageMapper.delete(query);
         deleteSnippetImageDirectory(snippetId);
     }
 
-    private SnippetImage findSnippetFile(Long snippetId, Long fileId) {
+    private SnippetImage findSnippetFile(String snippetId, String fileId) {
         QueryWrapper<SnippetImage> query = new QueryWrapper<SnippetImage>()
                 .eq("id", fileId)
                 .eq("snippet_id", snippetId)
@@ -106,7 +106,7 @@ public class SnippetImageService {
         return file;
     }
 
-    private void ensureSnippetBelongsToUser(Long snippetId, Long userId) {
+    private void ensureSnippetBelongsToUser(String snippetId, String userId) {
         QueryWrapper<Snippet> query = new QueryWrapper<Snippet>()
                 .eq("id", snippetId)
                 .eq("user_id", userId)
@@ -117,7 +117,7 @@ public class SnippetImageService {
         }
     }
 
-    private void deleteSnippetImageDirectory(Long snippetId) {
+    private void deleteSnippetImageDirectory(String snippetId) {
         Path snippetDir = Paths.get(uploadDir, "ocr-images", String.valueOf(snippetId)).toAbsolutePath().normalize();
         if (!Files.exists(snippetDir)) {
             return;

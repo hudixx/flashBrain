@@ -73,7 +73,7 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    public UserProfileResponse getProfile(Long userId) {
+    public UserProfileResponse getProfile(String userId) {
         User user = userMapper.selectById(userId);
         if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
             throw new RuntimeException("用户不存在或已禁用");
@@ -113,7 +113,7 @@ public class AuthService {
         return new UserProfileResponse(user.getId(), user.getUsername(), user.getEmail(), user.getDisplayName());
     }
 
-    private void claimAnonymousData(Long userId) {
+    private void claimAnonymousData(String userId) {
         subjectMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<com.flashbrain.entity.Subject>()
                 .isNull("user_id")
                 .set("user_id", userId));

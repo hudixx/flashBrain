@@ -13,11 +13,11 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 public class SnippetImage {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
+    private String id;
 
     @TableField("snippet_id")
-    private Long snippetId;
+    private String snippetId;
 
     @TableField("original_filename")
     private String originalFilename;

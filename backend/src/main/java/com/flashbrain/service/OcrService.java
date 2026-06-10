@@ -46,7 +46,7 @@ public class OcrService {
     private String cachedToken = null;
     private long tokenExpiryTime = 0;
 
-    public UploadResult uploadAndExtract(MultipartFile file, Long snippetId, Long userId, Long expectedOcrTextVersion) throws IOException {
+    public UploadResult uploadAndExtract(MultipartFile file, String snippetId, String userId, Long expectedOcrTextVersion) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new FileExtractException("上传文件不能为空");
         }
@@ -74,7 +74,7 @@ public class OcrService {
         );
     }
 
-    public UploadResult recognizeTextAsync(MultipartFile file, Long snippetId, Long userId) throws IOException {
+    public UploadResult recognizeTextAsync(MultipartFile file, String snippetId, String userId) throws IOException {
         Snippet snippet = snippetService.getSnippet(snippetId, userId);
         Long expectedVersion = snippet.getOcrTextVersion();
         snippetImageService.saveImage(snippetId, userId, file);

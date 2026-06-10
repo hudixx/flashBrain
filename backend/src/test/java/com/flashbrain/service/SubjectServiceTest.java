@@ -42,7 +42,7 @@ class SubjectServiceTest {
         subject.setName("Java");
         when(subjectMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(subject));
 
-        List<Subject> result = subjectService.getAll(3L);
+        List<Subject> result = subjectService.getAll("3");
 
         assertThat(result).containsExactly(subject);
         ArgumentCaptor<QueryWrapper<Subject>> captor = ArgumentCaptor.forClass(QueryWrapper.class);
@@ -54,25 +54,25 @@ class SubjectServiceTest {
     void shouldCreateSubjectForCurrentUser() {
         Subject subject = new Subject();
         subject.setName("MySQL");
-        subject.setUserId(99L);
+        subject.setUserId("99");
 
-        Subject result = subjectService.create(subject, 3L);
+        Subject result = subjectService.create(subject, "3");
 
         verify(subjectMapper).insert(subject);
         assertThat(result).isSameAs(subject);
-        assertThat(result.getUserId()).isEqualTo(3L);
+        assertThat(result.getUserId()).isEqualTo("3");
     }
 
     @Test
     void shouldUpdateSubjectName() {
         Subject subject = new Subject();
-        subject.setId(7L);
+        subject.setId("7");
         subject.setName("Old");
         Subject detail = new Subject();
         detail.setName("New");
         when(subjectMapper.selectOne(any(QueryWrapper.class))).thenReturn(subject);
 
-        Subject result = subjectService.update(7L, detail, 3L);
+        Subject result = subjectService.update("7", detail, "3");
 
         assertThat(result.getName()).isEqualTo("New");
         verify(subjectMapper).updateById(subject);
@@ -81,13 +81,13 @@ class SubjectServiceTest {
     @Test
     void shouldSoftDeleteSubjectAndItsActiveSnippets() {
         Subject subject = new Subject();
-        subject.setId(7L);
+        subject.setId("7");
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(subjectMapper.selectOne(any(QueryWrapper.class))).thenReturn(subject);
         when(snippetMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(snippet));
 
-        subjectService.softDeleteSubject(7L, 3L);
+        subjectService.softDeleteSubject("7", "3");
 
         assertThat(subject.getIsDeleted()).isTrue();
         assertThat(subject.getDeletedAt()).isNotNull();
@@ -101,16 +101,16 @@ class SubjectServiceTest {
     @Test
     void shouldRestoreSubjectAndSubjectDeletedSnippets() {
         Subject subject = new Subject();
-        subject.setId(7L);
+        subject.setId("7");
         subject.setIsDeleted(true);
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         snippet.setIsDeleted(true);
         snippet.setDeletedBySubject(true);
         when(subjectMapper.selectOne(any(QueryWrapper.class))).thenReturn(subject);
         when(snippetMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(snippet));
 
-        Subject result = subjectService.restoreSubject(7L, 3L);
+        Subject result = subjectService.restoreSubject("7", "3");
 
         assertThat(result.getIsDeleted()).isFalse();
         assertThat(result.getDeletedAt()).isNull();
@@ -125,7 +125,7 @@ class SubjectServiceTest {
     void shouldRejectSubjectOwnedByOtherUser() {
         when(subjectMapper.selectCount(any(QueryWrapper.class))).thenReturn(0L);
 
-        assertThatThrownBy(() -> subjectService.ensureSubjectBelongsToUser(7L, 3L))
+        assertThatThrownBy(() -> subjectService.ensureSubjectBelongsToUser("7", "3"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Subject not found");
     }

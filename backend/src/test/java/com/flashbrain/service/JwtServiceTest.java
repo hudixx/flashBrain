@@ -14,10 +14,10 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "secret", "flashbrain-test-secret-flashbrain-test-secret");
         ReflectionTestUtils.setField(jwtService, "expirationSeconds", 3600L);
 
-        String token = jwtService.generateToken(7L, "alice");
+        String token = jwtService.generateToken("7", "alice");
         UserPrincipal principal = jwtService.parseUser(token);
 
-        assertThat(principal.getId()).isEqualTo(7L);
+        assertThat(principal.getId()).isEqualTo("7");
         assertThat(principal.getUsername()).isEqualTo("alice");
         assertThat(jwtService.getExpirationSeconds()).isEqualTo(3600L);
     }

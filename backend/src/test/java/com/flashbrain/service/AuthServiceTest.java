@@ -52,7 +52,7 @@ class AuthServiceTest {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(0L);
         when(userMapper.selectCount(null)).thenReturn(0L);
         when(passwordEncoder.encode("password123")).thenReturn("encoded");
-        when(jwtService.generateToken(null, "alice")).thenReturn("token");
+        when(jwtService.generateToken(any(), any(String.class))).thenReturn("token");
         when(jwtService.getExpirationSeconds()).thenReturn(86400L);
 
         AuthResponse response = authService.register(request);
@@ -87,19 +87,19 @@ class AuthServiceTest {
         request.setUsernameOrEmail("alice");
         request.setPassword("password123");
         User user = new User();
-        user.setId(5L);
+        user.setId("5");
         user.setUsername("alice");
         user.setPasswordHash("encoded");
         user.setEnabled(true);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches("password123", "encoded")).thenReturn(true);
-        when(jwtService.generateToken(5L, "alice")).thenReturn("token");
+        when(jwtService.generateToken("5", "alice")).thenReturn("token");
         when(jwtService.getExpirationSeconds()).thenReturn(86400L);
 
         AuthResponse response = authService.login(request);
 
         assertThat(response.getToken()).isEqualTo("token");
-        assertThat(response.getUser().getId()).isEqualTo(5L);
+        assertThat(response.getUser().getId()).isEqualTo("5");
         assertThat(response.getUser().getUsername()).isEqualTo("alice");
     }
 

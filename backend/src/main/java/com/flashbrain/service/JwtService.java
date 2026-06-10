@@ -21,12 +21,12 @@ public class JwtService {
     @Value("${security.jwt.expiration-seconds}")
     private Long expirationSeconds;
 
-    public String generateToken(Long userId, String username) {
+    public String generateToken(String userId, String username) {
         Date now = new Date();
         Date expiresAt = new Date(now.getTime() + expirationSeconds * 1000);
 
         return Jwts.builder()
-                .setSubject(String.valueOf(userId))
+                .setSubject(userId)
                 .claim("username", username)
                 .setIssuedAt(now)
                 .setExpiration(expiresAt)
@@ -36,7 +36,7 @@ public class JwtService {
 
     public UserPrincipal parseUser(String token) {
         Claims claims = parseClaims(token);
-        Long userId = Long.valueOf(claims.getSubject());
+        String userId = claims.getSubject();
         String username = claims.get("username", String.class);
         return new UserPrincipal(userId, username, true);
     }

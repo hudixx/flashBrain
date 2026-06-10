@@ -23,7 +23,7 @@ public class OcrController {
 
     @PostMapping("/upload")
     public ResponseEntity<UploadResult> uploadAndRecognize(@RequestParam("file") MultipartFile file,
-                                                           @RequestParam("snippetId") Long snippetId,
+                                                           @RequestParam("snippetId") String snippetId,
                                                            @RequestParam(value = "ocrTextVersion", required = false) Long ocrTextVersion,
                                                            @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Received file upload request for: {}, snippet: {}", file.getOriginalFilename(), snippetId);

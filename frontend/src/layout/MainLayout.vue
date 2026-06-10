@@ -277,12 +277,12 @@ const router = useRouter()
 const showMastered = ref(true)
 const subjects = ref<any[]>([])
 const recycleSubjects = ref<any[]>([])
-const activeSubjectId = ref<number | null>(null)
+const activeSubjectId = ref<string | null>(null)
 const activeRecycleSubject = ref<any | null>(null)
 const snippetList = ref<any[]>([])
 const recycleSnippetList = ref<any[]>([])
 const currentSnippet = ref<any>(null)
-const selectedSnippetIds = ref<number[]>([])
+const selectedSnippetIds = ref<string[]>([])
 const viewMode = ref<ViewMode>('normal')
 
 const SNIPPET_PANEL_WIDTH_KEY = 'flashbrain.snippetPanelWidth'
@@ -475,15 +475,15 @@ const handleMenuSelect = (index: string) => {
     return
   }
   if (index.startsWith('recycle-')) {
-    const id = parseInt(index.replace('recycle-', ''))
+    const id = index.replace('recycle-', '')
     const subject = recycleSubjects.value.find(item => item.id === id)
     if (subject) {
       openRecycleSubject(subject)
     }
     return
   }
-  const id = parseInt(index.replace('1-', ''))
-  if (!isNaN(id)) {
+  const id = index.replace('1-', '')
+  if (id) {
     viewMode.value = 'normal'
     activeSubjectId.value = id
     activeRecycleSubject.value = null
@@ -579,7 +579,7 @@ const addSnippet = () => {
   })
 }
 
-const toggleSnippetSelection = (id: number, checked: boolean) => {
+const toggleSnippetSelection = (id: string, checked: boolean) => {
   if (checked) {
     if (!selectedSnippetIds.value.includes(id)) {
       selectedSnippetIds.value = [...selectedSnippetIds.value, id]

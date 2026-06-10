@@ -32,22 +32,22 @@ public class SubjectController {
     }
 
     @PutMapping("/{id}")
-    public Subject update(@PathVariable Long id, @RequestBody Subject subject, @AuthenticationPrincipal UserPrincipal principal) {
+    public Subject update(@PathVariable String id, @RequestBody Subject subject, @AuthenticationPrincipal UserPrincipal principal) {
         return subjectService.update(id, subject, principal.getId());
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public void delete(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         subjectService.softDeleteSubject(id, principal.getId());
     }
 
     @PostMapping("/{id}/restore")
-    public Subject restore(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public Subject restore(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         return subjectService.restoreSubject(id, principal.getId());
     }
 
     @DeleteMapping("/{id}/permanent")
-    public void permanentDelete(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public void permanentDelete(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         subjectService.permanentDeleteSubject(id, principal.getId());
     }
 }

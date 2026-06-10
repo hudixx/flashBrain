@@ -34,11 +34,11 @@ class DatabaseSchemaInitializerTest {
         DatabaseSchemaInitializer.TableDefinition snippet = table("snippet");
 
         assertThat(subject.getColumns()).containsKey("user_id");
-        assertThat(subject.getColumns().get("user_id").getExpectedType()).isEqualTo("bigint");
+        assertThat(subject.getColumns().get("user_id").getExpectedType()).isEqualTo("varchar(64)");
         assertThat(subject.getIndexes()).containsKeys("idx_subject_user_id", "idx_subject_user_deleted");
 
         assertThat(snippet.getColumns()).containsKey("user_id");
-        assertThat(snippet.getColumns().get("user_id").getExpectedType()).isEqualTo("bigint");
+        assertThat(snippet.getColumns().get("user_id").getExpectedType()).isEqualTo("varchar(64)");
         assertThat(snippet.getIndexes()).containsKeys("idx_snippet_user_subject", "idx_snippet_user_id", "idx_snippet_user_deleted_subject");
     }
 

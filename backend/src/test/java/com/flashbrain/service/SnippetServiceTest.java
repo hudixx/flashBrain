@@ -39,13 +39,13 @@ class SnippetServiceTest {
     @Test
     void shouldQuerySnippetsBySubjectWithUserPinAndSortOrder() {
         Snippet snippet = new Snippet();
-        snippet.setSubjectId(7L);
+        snippet.setSubjectId("7");
         when(snippetMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(snippet));
 
-        List<Snippet> result = snippetService.getSnippetsBySubject(7L, 3L);
+        List<Snippet> result = snippetService.getSnippetsBySubject("7", "3");
 
         assertThat(result).containsExactly(snippet);
-        verify(subjectService).ensureSubjectBelongsToUser(7L, 3L);
+        verify(subjectService).ensureSubjectBelongsToUser("7", "3");
         ArgumentCaptor<QueryWrapper<Snippet>> captor = ArgumentCaptor.forClass(QueryWrapper.class);
         verify(snippetMapper).selectList(captor.capture());
         String sqlSegment = captor.getValue().getSqlSegment();
@@ -57,24 +57,24 @@ class SnippetServiceTest {
     void shouldSetDefaultSortOrderAndUserWhenCreatingSnippet() {
         Snippet snippet = new Snippet();
         snippet.setTitle("New");
-        snippet.setSubjectId(7L);
-        snippet.setUserId(99L);
+        snippet.setSubjectId("7");
+        snippet.setUserId("99");
 
-        Snippet result = snippetService.createSnippet(snippet, 3L);
+        Snippet result = snippetService.createSnippet(snippet, "3");
 
-        verify(subjectService).ensureSubjectBelongsToUser(7L, 3L);
+        verify(subjectService).ensureSubjectBelongsToUser("7", "3");
         verify(snippetMapper).insert(snippet);
         assertThat(result.getSortOrder()).isNotNull();
-        assertThat(result.getUserId()).isEqualTo(3L);
+        assertThat(result.getUserId()).isEqualTo("3");
     }
 
     @Test
     void shouldMoveSnippetBetweenOrders() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        Snippet result = snippetService.moveSnippet(1L, 3L, 100.0, 300.0);
+        Snippet result = snippetService.moveSnippet("1", "3", 100.0, 300.0);
 
         assertThat(result.getSortOrder()).isEqualTo(200.0);
         verify(snippetMapper).updateById(snippet);
@@ -83,10 +83,10 @@ class SnippetServiceTest {
     @Test
     void shouldMoveSnippetBeforeFirstOrder() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        Snippet result = snippetService.moveSnippet(1L, 3L, null, 300.0);
+        Snippet result = snippetService.moveSnippet("1", "3", null, 300.0);
 
         assertThat(result.getSortOrder()).isEqualTo(150.0);
         verify(snippetMapper).updateById(snippet);
@@ -95,10 +95,10 @@ class SnippetServiceTest {
     @Test
     void shouldMoveSnippetAfterLastOrder() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        Snippet result = snippetService.moveSnippet(1L, 3L, 300.0, null);
+        Snippet result = snippetService.moveSnippet("1", "3", 300.0, null);
 
         assertThat(result.getSortOrder()).isEqualTo(1300.0);
         verify(snippetMapper).updateById(snippet);
@@ -107,10 +107,10 @@ class SnippetServiceTest {
     @Test
     void shouldMoveFirstSnippetToDefaultOrder() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        Snippet result = snippetService.moveSnippet(1L, 3L, null, null);
+        Snippet result = snippetService.moveSnippet("1", "3", null, null);
 
         assertThat(result.getSortOrder()).isEqualTo(1000.0);
         verify(snippetMapper).updateById(snippet);
@@ -119,12 +119,12 @@ class SnippetServiceTest {
     @Test
     void shouldToggleMasteredAndUnpinWhenMarkedMastered() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         snippet.setIsPinned(true);
         snippet.setIsMastered(false);
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        Snippet result = snippetService.toggleMastered(1L, 3L);
+        Snippet result = snippetService.toggleMastered("1", "3");
 
         assertThat(result.getIsMastered()).isTrue();
         assertThat(result.getIsPinned()).isFalse();
@@ -134,14 +134,14 @@ class SnippetServiceTest {
     @Test
     void shouldAllowClearingSnippetTextFieldsToNull() {
         Snippet existing = new Snippet();
-        existing.setId(1L);
+        existing.setId("1");
         existing.setTitle("old title");
         existing.setOcrText("old ocr");
         existing.setNoteContent("old note");
         Snippet detail = new Snippet();
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
 
-        Snippet result = snippetService.updateSnippet(1L, 3L, detail);
+        Snippet result = snippetService.updateSnippet("1", "3", detail);
 
         assertThat(result.getTitle()).isNull();
         assertThat(result.getOcrText()).isNull();
@@ -152,14 +152,14 @@ class SnippetServiceTest {
     @Test
     void shouldIncrementOcrVersionWhenUpdatingOcrText() {
         Snippet existing = new Snippet();
-        existing.setId(1L);
+        existing.setId("1");
         existing.setOcrText("old ocr");
         existing.setOcrTextVersion(4L);
         Snippet detail = new Snippet();
         detail.setOcrText("new ocr");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
 
-        Snippet result = snippetService.updateSnippet(1L, 3L, detail);
+        Snippet result = snippetService.updateSnippet("1", "3", detail);
 
         assertThat(result.getOcrText()).isEqualTo("new ocr");
         assertThat(result.getOcrTextVersion()).isEqualTo(5L);
@@ -169,11 +169,11 @@ class SnippetServiceTest {
     @Test
     void shouldReplaceOcrWhenVersionMatches() {
         Snippet existing = new Snippet();
-        existing.setId(1L);
+        existing.setId("1");
         existing.setOcrTextVersion(2L);
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
 
-        Snippet result = snippetService.replaceOcrIfVersionMatches(1L, 3L, "file text", 2L);
+        Snippet result = snippetService.replaceOcrIfVersionMatches("1", "3", "file text", 2L);
 
         assertThat(result.getOcrText()).isEqualTo("file text");
         assertThat(result.getOcrTextVersion()).isEqualTo(3L);
@@ -183,11 +183,11 @@ class SnippetServiceTest {
     @Test
     void shouldThrowWhenReplacingOcrWithStaleVersion() {
         Snippet existing = new Snippet();
-        existing.setId(1L);
+        existing.setId("1");
         existing.setOcrTextVersion(3L);
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(existing);
 
-        assertThatThrownBy(() -> snippetService.replaceOcrIfVersionMatches(1L, 3L, "file text", 2L))
+        assertThatThrownBy(() -> snippetService.replaceOcrIfVersionMatches("1", "3", "file text", 2L))
                 .isInstanceOf(OcrTextVersionConflictException.class)
                 .hasMessage("OCR 原文已被修改，请刷新后再上传文件");
     }
@@ -196,7 +196,7 @@ class SnippetServiceTest {
     void shouldConditionallyReplaceOcrForAsyncResult() {
         when(snippetMapper.update(isNull(), any())).thenReturn(1);
 
-        boolean result = snippetService.replaceOcrIfVersionStillMatches(1L, 3L, "ocr", 0L);
+        boolean result = snippetService.replaceOcrIfVersionStillMatches("1", "3", "ocr", 0L);
 
         assertThat(result).isTrue();
         verify(snippetMapper).update(isNull(), any());
@@ -205,36 +205,36 @@ class SnippetServiceTest {
     @Test
     void shouldSoftDeleteSnippetWithoutDeletingImages() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        snippetService.deleteSnippet(1L, 3L);
+        snippetService.deleteSnippet("1", "3");
 
         assertThat(snippet.getIsDeleted()).isTrue();
         assertThat(snippet.getDeletedAt()).isNotNull();
         assertThat(snippet.getDeletedBySubject()).isFalse();
-        verify(snippetImageService, never()).deleteImagesBySnippetId(1L);
+        verify(snippetImageService, never()).deleteImagesBySnippetId("1");
         verify(snippetMapper).updateById(snippet);
     }
 
     @Test
     void shouldPermanentlyDeleteSnippetImagesAndSnippet() {
         Snippet snippet = new Snippet();
-        snippet.setId(1L);
+        snippet.setId("1");
         snippet.setIsDeleted(true);
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
-        snippetService.permanentDeleteSnippet(1L, 3L);
+        snippetService.permanentDeleteSnippet("1", "3");
 
-        verify(snippetImageService).deleteImagesBySnippetId(1L);
-        verify(snippetMapper).deleteById(1L);
+        verify(snippetImageService).deleteImagesBySnippetId("1");
+        verify(snippetMapper).deleteById("1");
     }
 
     @Test
     void shouldThrowWhenSnippetMissingForCurrentUser() {
         when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> snippetService.updateNote(99L, 3L, "note"))
+        assertThatThrownBy(() -> snippetService.updateNote("99", "3", "note"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Snippet not found");
     }

@@ -7,17 +7,17 @@ import java.util.Collection;
 import java.util.Collections;
 
 public class UserPrincipal implements UserDetails {
-    private final Long id;
+    private final String id;
     private final String username;
     private final boolean enabled;
 
-    public UserPrincipal(Long id, String username, boolean enabled) {
+    public UserPrincipal(String id, String username, boolean enabled) {
         this.id = id;
         this.username = username;
         this.enabled = enabled;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 

@@ -107,7 +107,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         tables.add(new TableDefinition(
                 "app_user",
                 "CREATE TABLE `app_user` ("
-                        + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                        + "`id` VARCHAR(64) NOT NULL,"
                         + "`username` VARCHAR(64) NOT NULL,"
                         + "`email` VARCHAR(128) NULL,"
                         + "`password_hash` VARCHAR(100) NOT NULL,"
@@ -118,7 +118,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
-                        column("id", "bigint", "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"),
+                        column("id", "varchar(64)", "`id` VARCHAR(64) NOT NULL PRIMARY KEY"),
                         column("username", "varchar(64)", "`username` VARCHAR(64) NOT NULL"),
                         column("email", "varchar(128)", "`email` VARCHAR(128) NULL"),
                         column("password_hash", "varchar(100)", "`password_hash` VARCHAR(100) NOT NULL"),
@@ -136,20 +136,20 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         tables.add(new TableDefinition(
                 "subject",
                 "CREATE TABLE `subject` ("
-                        + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                        + "`id` VARCHAR(64) NOT NULL,"
                         + "`name` VARCHAR(255) NULL,"
-                        + "`parent_id` BIGINT NULL,"
-                        + "`user_id` BIGINT NULL,"
+                        + "`parent_id` VARCHAR(64) NULL,"
+                        + "`user_id` VARCHAR(64) NULL,"
                         + "`icon` VARCHAR(255) NULL,"
                         + "`is_deleted` TINYINT(1) NULL DEFAULT 0,"
                         + "`deleted_at` DATETIME NULL,"
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
-                        column("id", "bigint", "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"),
+                        column("id", "varchar(64)", "`id` VARCHAR(64) NOT NULL PRIMARY KEY"),
                         column("name", "varchar(255)", "`name` VARCHAR(255) NULL"),
-                        column("parent_id", "bigint", "`parent_id` BIGINT NULL"),
-                        column("user_id", "bigint", "`user_id` BIGINT NULL"),
+                        column("parent_id", "varchar(64)", "`parent_id` VARCHAR(64) NULL"),
+                        column("user_id", "varchar(64)", "`user_id` VARCHAR(64) NULL"),
                         column("icon", "varchar(255)", "`icon` VARCHAR(255) NULL"),
                         column("is_deleted", "tinyint(1)", "`is_deleted` TINYINT(1) NULL DEFAULT 0"),
                         column("deleted_at", "datetime", "`deleted_at` DATETIME NULL")
@@ -163,9 +163,9 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         tables.add(new TableDefinition(
                 "snippet",
                 "CREATE TABLE `snippet` ("
-                        + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
-                        + "`subject_id` BIGINT NULL,"
-                        + "`user_id` BIGINT NULL,"
+                        + "`id` VARCHAR(64) NOT NULL,"
+                        + "`subject_id` VARCHAR(64) NULL,"
+                        + "`user_id` VARCHAR(64) NULL,"
                         + "`title` VARCHAR(255) NULL,"
                         + "`image_path` VARCHAR(255) NULL,"
                         + "`ocr_text` LONGTEXT NULL,"
@@ -180,9 +180,9 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
-                        column("id", "bigint", "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"),
-                        column("subject_id", "bigint", "`subject_id` BIGINT NULL"),
-                        column("user_id", "bigint", "`user_id` BIGINT NULL"),
+                        column("id", "varchar(64)", "`id` VARCHAR(64) NOT NULL PRIMARY KEY"),
+                        column("subject_id", "varchar(64)", "`subject_id` VARCHAR(64) NULL"),
+                        column("user_id", "varchar(64)", "`user_id` VARCHAR(64) NULL"),
                         column("title", "varchar(255)", "`title` VARCHAR(255) NULL"),
                         column("image_path", "varchar(255)", "`image_path` VARCHAR(255) NULL"),
                         column("ocr_text", "longtext", "`ocr_text` LONGTEXT NULL"),
@@ -205,8 +205,8 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         tables.add(new TableDefinition(
                 "snippet_image",
                 "CREATE TABLE `snippet_image` ("
-                        + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
-                        + "`snippet_id` BIGINT NULL,"
+                        + "`id` VARCHAR(64) NOT NULL,"
+                        + "`snippet_id` VARCHAR(64) NULL,"
                         + "`original_filename` VARCHAR(255) NULL,"
                         + "`stored_filename` VARCHAR(255) NULL,"
                         + "`url` VARCHAR(255) NULL,"
@@ -214,8 +214,8 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         + "PRIMARY KEY (`id`)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                 columns(
-                        column("id", "bigint", "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"),
-                        column("snippet_id", "bigint", "`snippet_id` BIGINT NULL"),
+                        column("id", "varchar(64)", "`id` VARCHAR(64) NOT NULL PRIMARY KEY"),
+                        column("snippet_id", "varchar(64)", "`snippet_id` VARCHAR(64) NULL"),
                         column("original_filename", "varchar(255)", "`original_filename` VARCHAR(255) NULL"),
                         column("stored_filename", "varchar(255)", "`stored_filename` VARCHAR(255) NULL"),
                         column("url", "varchar(255)", "`url` VARCHAR(255) NULL"),
