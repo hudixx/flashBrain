@@ -167,7 +167,7 @@
           :key="s.id"
           :class="['snippet-card', { active: currentSnippet?.id === s.id, mastered: s.isMastered }]"
           shadow="hover"
-          @click="currentSnippet = s"
+          @click="selectSnippet(s)"
         >
           <div class="snippet-content">
             <el-checkbox
@@ -710,9 +710,20 @@ const toggleEditorFullscreen = () => {
   isEditorFullscreen.value = !isEditorFullscreen.value
 }
 
-const openSnippetFullscreen = (snippet: any, event?: MouseEvent) => {
+const selectSnippet = async (snippet: any) => {
+  try {
+    const res = await apiClient.get(`/snippets/${snippet.id}`)
+    currentSnippet.value = res.data
+  } catch (err) {
+    console.error('获取片段详情失败', err)
+    ElMessage.warning('获取最新详情失败，使用本地缓存')
+    currentSnippet.value = snippet
+  }
+}
+
+const openSnippetFullscreen = async (snippet: any, event?: MouseEvent) => {
   event?.stopPropagation()
-  currentSnippet.value = snippet
+  await selectSnippet(snippet)
   isEditorFullscreen.value = true
 }
 

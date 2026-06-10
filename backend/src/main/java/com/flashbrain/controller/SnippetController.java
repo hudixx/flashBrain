@@ -25,31 +25,38 @@ public class SnippetController {
     private SnippetImageService snippetImageService;
 
     @GetMapping("/subject/{subjectId}")
-    public List<Snippet> getBySubject(@PathVariable Long subjectId, @AuthenticationPrincipal UserPrincipal principal) {
+    public List<Snippet> getBySubject(@PathVariable String subjectId, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching snippets for subject: {}", subjectId);
         return snippetService.getSnippetsBySubject(subjectId, principal.getId());
     }
 
+    @GetMapping("/{id}")
+    public Snippet get(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Fetching snippet detail: {}", id);
+        return snippetService.getSnippet(id, principal.getId());
+    }
+
+
     @GetMapping("/recycle/subject/{subjectId}")
-    public List<Snippet> getDeletedBySubject(@PathVariable Long subjectId, @AuthenticationPrincipal UserPrincipal principal) {
+    public List<Snippet> getDeletedBySubject(@PathVariable String subjectId, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching deleted snippets for subject: {}", subjectId);
         return snippetService.getDeletedSnippetsBySubject(subjectId, principal.getId());
     }
 
     @GetMapping("/{id}/images")
-    public List<SnippetImage> getImages(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public List<SnippetImage> getImages(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching images for snippet: {}", id);
         return snippetImageService.getImages(id, principal.getId());
     }
 
     @GetMapping("/{id}/files")
-    public List<SnippetImage> getFiles(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public List<SnippetImage> getFiles(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Fetching uploaded files for snippet: {}", id);
         return snippetImageService.getFiles(id, principal.getId());
     }
 
     @GetMapping("/{id}/files/{fileId}/preview")
-    public FilePreviewResult previewFile(@PathVariable Long id,
+    public FilePreviewResult previewFile(@PathVariable String id,
                                          @PathVariable Long fileId,
                                          @AuthenticationPrincipal UserPrincipal principal) throws Exception {
         log.info("Previewing uploaded file: {} for snippet: {}", fileId, id);
@@ -57,7 +64,7 @@ public class SnippetController {
     }
 
     @PostMapping("/{id}/move")
-    public Snippet move(@PathVariable Long id,
+    public Snippet move(@PathVariable String id,
                         @RequestParam(required = false) Double prevOrder,
                         @RequestParam(required = false) Double nextOrder,
                         @AuthenticationPrincipal UserPrincipal principal) {
@@ -66,7 +73,7 @@ public class SnippetController {
     }
 
     @PostMapping("/{id}/archive")
-    public Snippet archive(@PathVariable Long id, @RequestParam Long newSubjectId, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet archive(@PathVariable String id, @RequestParam String newSubjectId, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Archiving snippet: {} to subject: {}", id, newSubjectId);
         return snippetService.archiveSnippet(id, principal.getId(), newSubjectId);
     }
@@ -78,55 +85,55 @@ public class SnippetController {
     }
 
     @PutMapping("/{id}")
-    public Snippet update(@PathVariable Long id, @RequestBody Snippet detail, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet update(@PathVariable String id, @RequestBody Snippet detail, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Updating snippet detail: {}", id);
         return snippetService.updateSnippet(id, principal.getId(), detail);
     }
 
     @PutMapping("/{id}/ocr")
-    public Snippet updateOcr(@PathVariable Long id, @RequestBody String ocrText, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet updateOcr(@PathVariable String id, @RequestBody String ocrText, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Updating OCR for snippet: {}", id);
         return snippetService.updateOcr(id, principal.getId(), ocrText);
     }
 
     @PutMapping("/{id}/note")
-    public Snippet updateNote(@PathVariable Long id, @RequestBody String noteContent, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet updateNote(@PathVariable String id, @RequestBody String noteContent, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Updating note for snippet: {}", id);
         return snippetService.updateNote(id, principal.getId(), noteContent);
     }
 
     @PostMapping("/{id}/toggle-pin")
-    public Snippet togglePin(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet togglePin(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Toggling pin for snippet: {}", id);
         return snippetService.togglePin(id, principal.getId());
     }
 
     @PostMapping("/{id}/toggle-mastered")
-    public Snippet toggleMastered(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet toggleMastered(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Toggling mastered for snippet: {}", id);
         return snippetService.toggleMastered(id, principal.getId());
     }
 
     @PostMapping("/batch-delete")
-    public void batchDelete(@RequestBody List<Long> ids, @AuthenticationPrincipal UserPrincipal principal) {
+    public void batchDelete(@RequestBody List<String> ids, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Batch deleting snippets: {}", ids);
         snippetService.batchDeleteSnippets(ids, principal.getId());
     }
 
     @PostMapping("/{id}/restore")
-    public Snippet restore(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public Snippet restore(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Restoring snippet: {}", id);
         return snippetService.restoreSnippet(id, principal.getId());
     }
 
     @DeleteMapping("/{id}/permanent")
-    public void permanentDelete(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public void permanentDelete(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Permanently deleting snippet: {}", id);
         snippetService.permanentDeleteSnippet(id, principal.getId());
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    public void delete(@PathVariable String id, @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Deleting snippet: {}", id);
         snippetService.deleteSnippet(id, principal.getId());
     }
