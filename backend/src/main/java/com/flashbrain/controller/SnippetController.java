@@ -5,6 +5,7 @@ import com.flashbrain.entity.Snippet;
 import com.flashbrain.entity.SnippetImage;
 import com.flashbrain.security.UserPrincipal;
 import com.flashbrain.service.SnippetImageService;
+import com.flashbrain.service.SnippetSearchService;
 import com.flashbrain.service.SnippetService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,26 @@ public class SnippetController {
 
     @Autowired
     private SnippetImageService snippetImageService;
+
+    @Autowired
+    private SnippetSearchService snippetSearchService;
+
+    @GetMapping("/search")
+    public List<Snippet> search(@RequestParam(required = false) String keyword,
+                                @RequestParam(required = false) String subjectId,
+                                @RequestParam(defaultValue = "false") boolean global,
+                                @RequestParam(defaultValue = "false") boolean includeDeleted,
+                                @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Searching snippets with keyword: {}, global: {}, includeDeleted: {}", keyword, global, includeDeleted);
+        String targetSubjectId = global ? null : subjectId;
+        return snippetSearchService.searchSnippets(keyword, targetSubjectId, principal.getId(), includeDeleted);
+    }
+
+    @PostMapping("/sync-es")
+    public void syncEs() {
+        log.info("Manual trigger for Elasticsearch sync");
+        snippetSearchService.syncAllToEs();
+    }
 
     @GetMapping("/subject/{subjectId}")
     public List<Snippet> getBySubject(@PathVariable String subjectId, @AuthenticationPrincipal UserPrincipal principal) {

@@ -22,7 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SnippetServiceTest {
+public class SnippetServiceTest {
 
     @Mock
     private SnippetMapper snippetMapper;
@@ -32,6 +32,9 @@ class SnippetServiceTest {
 
     @Mock
     private SubjectService subjectService;
+
+    @Mock
+    private SnippetSearchService snippetSearchService;
 
     @InjectMocks
     private SnippetService snippetService;
@@ -195,11 +198,14 @@ class SnippetServiceTest {
     @Test
     void shouldConditionallyReplaceOcrForAsyncResult() {
         when(snippetMapper.update(isNull(), any())).thenReturn(1);
+        Snippet snippet = new Snippet();
+        when(snippetMapper.selectOne(any(QueryWrapper.class))).thenReturn(snippet);
 
         boolean result = snippetService.replaceOcrIfVersionStillMatches("1", "3", "ocr", 0L);
 
         assertThat(result).isTrue();
         verify(snippetMapper).update(isNull(), any());
+        verify(snippetSearchService).syncToEs(snippet);
     }
 
     @Test

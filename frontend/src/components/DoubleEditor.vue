@@ -105,9 +105,8 @@
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" align="right">
+        <el-table-column label="操作" width="100" align="right">
           <template #default="{ row }">
-            <el-button size="small" text type="primary" @click="viewFile(row)">查看</el-button>
             <el-button size="small" text type="primary" @click="downloadFile(row)">下载</el-button>
           </template>
         </el-table-column>

@@ -24,6 +24,9 @@ public class SnippetService {
     @Autowired
     private SubjectService subjectService;
 
+    @Autowired
+    private SnippetSearchService snippetSearchService;
+
     /**
      * 实现浮点排序逻辑 (Lexical Ordering)
      * new_order = (prev_order + next_order) / 2
@@ -45,6 +48,7 @@ public class SnippetService {
 
         snippet.setSortOrder(newOrder);
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -59,6 +63,7 @@ public class SnippetService {
         snippet.setSubjectId(newSubjectId);
         snippet.setSortOrder(0.0);
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -95,6 +100,7 @@ public class SnippetService {
             snippet.setSortOrder(System.currentTimeMillis() / 1000.0);
         }
         snippetMapper.insert(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -108,6 +114,7 @@ public class SnippetService {
         snippet.setOcrText(detail.getOcrText());
         snippet.setNoteContent(detail.getNoteContent());
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -117,6 +124,7 @@ public class SnippetService {
         snippet.setOcrText(ocrText);
         snippet.setOcrTextVersion(nextOcrTextVersion(snippet.getOcrTextVersion()));
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -130,6 +138,7 @@ public class SnippetService {
         snippet.setOcrText(ocrText);
         snippet.setOcrTextVersion(nextOcrTextVersion(currentVersion));
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -147,7 +156,12 @@ public class SnippetService {
         } else {
             update.eq("ocr_text_version", version);
         }
-        return snippetMapper.update(null, update) > 0;
+        boolean updated = snippetMapper.update(null, update) > 0;
+        if (updated) {
+            Snippet snippet = findActiveSnippet(id, userId);
+            snippetSearchService.syncToEs(snippet);
+        }
+        return updated;
     }
 
     public Snippet getSnippet(String id, String userId) {
@@ -159,6 +173,7 @@ public class SnippetService {
         Snippet snippet = findActiveSnippet(id, userId);
         snippet.setNoteContent(noteContent);
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -167,6 +182,7 @@ public class SnippetService {
         Snippet snippet = findActiveSnippet(id, userId);
         snippet.setIsPinned(!Boolean.TRUE.equals(snippet.getIsPinned()));
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -178,6 +194,7 @@ public class SnippetService {
             snippet.setIsPinned(false);
         }
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -186,6 +203,7 @@ public class SnippetService {
         Snippet snippet = findActiveSnippet(id, userId);
         markSnippetDeleted(snippet, LocalDateTime.now(), false);
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
     }
 
     @Transactional
@@ -202,6 +220,7 @@ public class SnippetService {
         for (Snippet snippet : snippets) {
             markSnippetDeleted(snippet, now, false);
             snippetMapper.updateById(snippet);
+            snippetSearchService.syncToEs(snippet);
         }
     }
 
@@ -213,6 +232,7 @@ public class SnippetService {
         snippet.setDeletedAt(null);
         snippet.setDeletedBySubject(false);
         snippetMapper.updateById(snippet);
+        snippetSearchService.syncToEs(snippet);
         return snippet;
     }
 
@@ -221,6 +241,7 @@ public class SnippetService {
         findDeletedSnippet(id, userId);
         snippetImageService.deleteImagesBySnippetId(id);
         snippetMapper.deleteById(id);
+        snippetSearchService.deleteFromEs(id);
     }
 
     public void ensureSnippetBelongsToUser(String id, String userId) {

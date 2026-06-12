@@ -128,13 +128,20 @@
       :style="{ width: `${snippetPanelWidth}px` }"
     >
       <div class="header-actions">
-        <el-input :placeholder="headerPlaceholder" class="search-input">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="headerPlaceholder"
+          class="search-input"
+          clearable
+          @input="onSearchInput"
+        >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
         <div class="header-right">
           <template v-if="viewMode === 'normal'">
+            <el-checkbox v-model="isGlobalSearch" style="margin-right: 8px">全局搜索</el-checkbox>
             <el-button
               v-if="selectedSnippetIds.length > 0"
               type="danger"
@@ -154,7 +161,8 @@
             <span class="mode-title">回收站</span>
             <el-button size="small" @click="refreshCurrentView">刷新</el-button>
           </template>
-          <template v-else>
+          <template v-else-if="viewMode === 'recycleSnippets'">
+            <el-checkbox v-model="isGlobalSearch" style="margin-right: 8px">全局搜索</el-checkbox>
             <el-button size="small" @click="backToRecycleSubjects">返回回收站</el-button>
             <span class="mode-title">{{ activeRecycleSubject?.name || '已删除片段' }}</span>
           </template>
@@ -162,41 +170,48 @@
       </div>
 
       <div v-if="viewMode === 'normal'" class="snippet-list">
-        <el-card
+        <el-tooltip
           v-for="s in filteredSnippetList"
           :key="s.id"
-          :class="['snippet-card', { active: currentSnippet?.id === s.id, mastered: s.isMastered }]"
-          shadow="hover"
-          @click="selectSnippet(s)"
+          :content="getSubjectName(s.subjectId)"
+          placement="top-start"
+          :enterable="false"
         >
-          <div class="snippet-content">
-            <el-checkbox
-              class="snippet-checkbox"
-              :model-value="selectedSnippetIds.includes(s.id)"
-              size="small"
-              @click.stop
-              @change="checked => toggleSnippetSelection(s.id, Boolean(checked))"
-            />
-            <div class="snippet-info">
-              <h3 class="snippet-title">
-                <span class="title-text">{{ s.title }}</span>
-                <el-tag v-if="s.isPinned" size="small">置顶</el-tag>
-              </h3>
-            </div>
-            <el-tooltip content="全屏查看" placement="top">
-              <el-button
-                class="snippet-fullscreen-btn"
-                circle
+          <el-card
+            :class="['snippet-card', { active: currentSnippet?.id === s.id, mastered: s.isMastered }]"
+            shadow="hover"
+            @click="selectSnippet(s)"
+          >
+            <div class="snippet-content">
+              <el-checkbox
+                class="snippet-checkbox"
+                :model-value="selectedSnippetIds.includes(s.id)"
                 size="small"
-                @click="openSnippetFullscreen(s, $event)"
-              >
-                <el-icon><FullScreen /></el-icon>
-              </el-button>
-            </el-tooltip>
-          </div>
-        </el-card>
+                @click.stop
+                @change="checked => toggleSnippetSelection(s.id, Boolean(checked))"
+              />
+              <div class="snippet-info">
+                <h3 class="snippet-title">
+                  <span class="title-text">{{ s.title }}</span>
+                  <el-tag v-if="s.isPinned" size="small">置顶</el-tag>
+                </h3>
+              </div>
+              <el-tooltip content="全屏查看" placement="top">
+                <el-button
+                  class="snippet-fullscreen-btn"
+                  circle
+                  size="small"
+                  @click="openSnippetFullscreen(s, $event)"
+                >
+                  <el-icon><FullScreen /></el-icon>
+                </el-button>
+              </el-tooltip>
+            </div>
+          </el-card>
+        </el-tooltip>
         <div v-if="filteredSnippetList.length === 0" class="empty-state">
-           请选择一个科目，并点击“记一下”开始记录
+           <template v-if="searchKeyword">未找到匹配的知识片段</template>
+           <template v-else>请选择一个科目，并点击“记一下”开始记录</template>
         </div>
       </div>
 
@@ -234,7 +249,8 @@
           </div>
         </el-card>
         <div v-if="recycleSnippetList.length === 0" class="empty-state">
-          该科目下暂无已删除片段
+          <template v-if="searchKeyword">未找到匹配的已删除片段</template>
+          <template v-else>该科目下暂无已删除片段</template>
         </div>
       </div>
     </el-main>
@@ -263,20 +279,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { SwitchButton, Monitor, Folder, Search, Plus, Expand, FullScreen, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import apiClient from '../api/client'
 import { useAuthStore } from '../stores/auth'
 
+// Simple debounce implementation to avoid adding lodash dependency just for this
+const debounce = (fn: Function, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>
+  return (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => {
+      fn(...args)
+    }, delay)
+  }
+}
+
 type ViewMode = 'normal' | 'recycleSubjects' | 'recycleSnippets'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const showMastered = ref(true)
+const isGlobalSearch = ref(false)
+const searchKeyword = ref('')
 const subjects = ref<any[]>([])
 const recycleSubjects = ref<any[]>([])
+
+const getSubjectName = (subjectId?: string) => {
+  if (!subjectId) return '未归类科目'
+  const sub = subjects.value.find(item => String(item.id) === String(subjectId))
+  return sub ? `所属科目: ${sub.name}` : '未找到相关科目'
+}
 const activeSubjectId = ref<string | null>(null)
 const activeRecycleSubject = ref<any | null>(null)
 const snippetList = ref<any[]>([])
@@ -319,9 +354,10 @@ const menuActiveIndex = computed(() => {
 })
 
 const headerPlaceholder = computed(() => {
-  if (viewMode.value === 'normal') return '搜索关键词 (穿透归档)...'
+  if (isGlobalSearch.value) return '全局搜索关键词 (支持标题、OCR、笔记)...'
+  if (viewMode.value === 'normal') return '当前科目内搜索关键词...'
   if (viewMode.value === 'recycleSubjects') return '回收站科目列表'
-  return '回收站片段列表'
+  return '回收站片段搜索...'
 })
 
 const loadSubjectCollapsed = () => {
@@ -423,6 +459,51 @@ const fetchRecycleSnippets = async () => {
   }
 }
 
+const doSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    if (viewMode.value === 'normal') {
+      await fetchSnippets()
+    } else if (viewMode.value === 'recycleSnippets') {
+      await fetchRecycleSnippets()
+    }
+    return
+  }
+
+  try {
+    const isRecycle = viewMode.value === 'recycleSnippets'
+    const currentSubId = isRecycle ? activeRecycleSubject.value?.id : activeSubjectId.value
+
+    // 如果不是全局搜索，必须有一个当前科目才能搜索
+    if (!isGlobalSearch.value && !currentSubId) return
+
+    const res = await apiClient.get('/snippets/search', {
+      params: {
+        keyword: searchKeyword.value,
+        subjectId: currentSubId,
+        global: isGlobalSearch.value,
+        includeDeleted: isRecycle
+      }
+    })
+
+    if (viewMode.value === 'normal') {
+      snippetList.value = res.data
+    } else if (viewMode.value === 'recycleSnippets') {
+      recycleSnippetList.value = res.data
+    }
+    clearSnippetSelection()
+  } catch (err) {
+    console.error('搜索片段失败', err)
+  }
+}
+
+const onSearchInput = debounce(doSearch, 300)
+
+watch(isGlobalSearch, () => {
+  if (searchKeyword.value.trim()) {
+    doSearch()
+  }
+})
+
 const refreshCurrentView = async () => {
   await fetchSubjects()
   if (viewMode.value === 'normal') {
@@ -442,6 +523,7 @@ const openRecycleBin = async () => {
   currentSnippet.value = null
   snippetList.value = []
   recycleSnippetList.value = []
+  searchKeyword.value = ''
   clearSnippetSelection()
   isEditorFullscreen.value = false
   await fetchRecycleSubjects()
@@ -452,6 +534,7 @@ const openRecycleSubject = async (subject: any) => {
   viewMode.value = 'recycleSnippets'
   currentSnippet.value = null
   recycleSnippetList.value = []
+  searchKeyword.value = ''
   await fetchRecycleSnippets()
 }
 
@@ -460,6 +543,7 @@ const backToRecycleSubjects = async () => {
   activeRecycleSubject.value = null
   currentSnippet.value = null
   recycleSnippetList.value = []
+  searchKeyword.value = ''
   await fetchRecycleSubjects()
 }
 
@@ -489,6 +573,7 @@ const handleMenuSelect = (index: string) => {
     activeRecycleSubject.value = null
     currentSnippet.value = null
     recycleSnippetList.value = []
+    searchKeyword.value = ''
     clearSnippetSelection()
     fetchSnippets()
   }
